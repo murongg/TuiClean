@@ -1,4 +1,4 @@
 import { mountApp } from '../../components/mount';
-import Demo from './DemoApp';
+import DemoPage from './DemoPage';
 
-mountApp(document.getElementById('root')!, <Demo />, import.meta.hot);
+mountApp(document.getElementById('root')!, <DemoPage />, import.meta.hot);

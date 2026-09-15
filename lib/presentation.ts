@@ -142,7 +142,7 @@ export function present(
       feedback(`正在向 X 提交拉黑 @${post.author}…`);
       callbacks.blockX!()
         .then(() => {
-          feedback(`已提交拉黑 @${post.author} 的操作，请以 X 的提示为准。取消请使用 X 原生菜单。`);
+          feedback(`已确认在 X 中拉黑 @${post.author}。取消请使用 X 原生菜单。`);
         })
         .catch((error) => {
           feedback(error instanceof Error ? error.message : 'X 拉黑未能提交，请重试。', true);

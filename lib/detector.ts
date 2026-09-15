@@ -1,10 +1,12 @@
 import type { Settings } from './settings';
 import {
   adultPattern,
+  adultOfferPattern,
   spamPattern,
   contactPattern,
   contextPattern,
   comparisonBaitPattern,
+  bodyOnlyBaitPattern,
 } from './rules';
 import { compactText, normalizeText } from './text';
 import { findTemplates } from './templates';
@@ -121,14 +123,18 @@ export function inspect(
       '同时包含其他平台的博主或账号推荐，以及露骨描述或多组性暗示',
     );
   }
-  if (settings.adult && active('adult-bait') && comparisonBaitPattern.test(compactText(text))) {
-    return result('suspect', 'adult', 'adult-bait', '命中成对的挑逗式自我比较引流话术');
+  if (settings.adult && active('adult-bait')) {
+    const bait = compactText(text);
+    if (comparisonBaitPattern.test(bait))
+      return result('suspect', 'adult', 'adult-bait', '命中成对的挑逗式自我比较引流话术');
+    if (bodyOnlyBaitPattern.test(bait))
+      return result('suspect', 'adult', 'adult-bait', '命中完整的关系与身体对照式招揽话术');
   }
-  const adult = adultPattern.test(combined) || adultPattern.test(compact);
   const spam = spamPattern.test(combined) || spamPattern.test(compact);
-  // A display name is weak evidence. Only an offer in the post's own text can
-  // upgrade the result to the stronger evidence tier; display mode is separate.
+  // Topic/platform labels in a name do not describe this reply. Keep body hints
+  // separate from explicit profile offers; suspect matches also fold by default.
   const adultText = adultPattern.test(text) || adultPattern.test(text.replace(/\s/g, ''));
+  const adultName = adultOfferPattern.test(name) || adultOfferPattern.test(name.replace(/\s/g, ''));
   const spamText = spamPattern.test(text) || spamPattern.test(text.replace(/\s/g, ''));
   const external = post.links.some((link) => {
     try {
@@ -143,7 +149,7 @@ export function inspect(
   });
   const contact =
     contactPattern.test(text) || contactPattern.test(text.replace(/\s/g, '')) || external;
-  if (settings.adult && adult) {
+  if (settings.adult && (adultText || adultName)) {
     if (adultText && contact && active('adult-solicitation'))
       return result('block', 'adult', 'adult-solicitation', '同时出现成人内容线索与招揽、导流行为');
     if (active('adult-hint'))

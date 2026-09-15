@@ -1,5 +1,5 @@
 import { defaultSettings, validateSettings, type Settings } from './settings';
-import { normalizeUsername } from './accounts';
+import { normalizeUsername, planLocalBlocks, type LocalBlockResult } from './accounts';
 
 export interface StoragePort {
   get: () => Promise<Record<string, unknown>>;
@@ -23,6 +23,14 @@ export function createStore(port: StoragePort) {
   }
   return {
     get,
+    async blockAuthors(authors: readonly string[]): Promise<LocalBlockResult> {
+      const plan = planLocalBlocks(authors, await get());
+      // A batch adds only its own keys; replacing the full list could erase
+      // accounts blocked concurrently by another tab.
+      if (plan.added.length)
+        await port.set(Object.fromEntries(plan.added.map((name) => [blockedPrefix + name, true])));
+      return plan;
+    },
     async setBlocked(author: string, blocked: boolean): Promise<Settings> {
       const name = normalizeUsername(author);
       // One key per account prevents clicks in separate X tabs from replacing

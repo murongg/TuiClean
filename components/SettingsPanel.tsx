@@ -1,26 +1,32 @@
 import { useState, type FormEvent } from 'react';
-import {
-  decodeBackup,
-  defaultSettings,
-  encodeBackup,
-  validateSettings,
-  type Settings,
-} from '../lib/settings';
+import { defaultSettings, validateSettings, type Settings } from '../lib/settings';
 import { RULES } from '../lib/rules';
 import { Toggle } from './Toggle';
+import { HistoryPanel } from './HistoryPanel';
+import { BackupPanel } from './BackupPanel';
+import type { HistorySource } from '../lib/history';
 
 const personalKeys = ['keywords', 'domains', 'whitelist', 'blockedUsers', 'usernameRules'] as const;
 interface Props {
   settings: Settings;
   onPatch: (patch: Partial<Settings>) => Promise<void>;
   demo?: boolean;
+  history?: HistorySource;
+  initialSection?: 'general' | 'history';
 }
-export function SettingsPanel({ settings, onPatch, demo = false }: Props) {
-  const [section, setSection] = useState<'general' | 'personal' | 'rules' | 'data'>('general');
+export function SettingsPanel({
+  settings,
+  onPatch,
+  demo = false,
+  history,
+  initialSection = 'general',
+}: Props) {
+  const [section, setSection] = useState<'general' | 'personal' | 'rules' | 'data' | 'history'>(
+    history ? initialSection : 'general',
+  );
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<Settings | null>(null);
   const [resetting, setResetting] = useState(false);
   const [draft, setDraft] = useState<Partial<Record<(typeof personalKeys)[number], string>>>({});
   function edit(key: (typeof personalKeys)[number], value: string) {
@@ -29,6 +35,7 @@ export function SettingsPanel({ settings, onPatch, demo = false }: Props) {
   const tabs = [
     ['general', '过滤偏好'],
     ['personal', '个人规则'],
+    ['history', '拦截记录'],
     ['rules', '内置规则'],
     ['data', '数据与隐私'],
   ] as const;
@@ -71,7 +78,9 @@ export function SettingsPanel({ settings, onPatch, demo = false }: Props) {
               .filter((key) => Object.hasOwn(draft, key))
               .map((key) => [key, parsed[key]]),
           ),
-          '个人规则已保存，将立即应用到已打开的 X 页面。',
+          demo
+            ? '个人规则已保存，仅用于本次演示。'
+            : '个人规则已保存，将立即应用到已打开的 X 页面。',
         )
       )
         setDraft({});
@@ -79,46 +88,21 @@ export function SettingsPanel({ settings, onPatch, demo = false }: Props) {
       setError((e as Error).message);
     }
   }
-  async function readBackup(file?: File) {
-    if (!file) return;
-    setMessage('');
-    setError('');
-    setPending(null);
-    try {
-      if (file.size > 131_072) throw new Error('文件超过 128 KB，请选择设置备份。');
-      setPending(decodeBackup(await file.text()));
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-  function download() {
-    try {
-      const url = URL.createObjectURL(
-        new Blob([encodeBackup(settings)], { type: 'application/json' }),
-      );
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'tuiclean-settings.json';
-      anchor.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setMessage('已生成设置备份。');
-    } catch {
-      setError('导出失败，请重试。');
-    }
-  }
   return (
     <div className="settings-layout">
       <nav className="settings-nav" aria-label="设置分类">
-        {tabs.map(([key, label]) => (
-          <button
-            key={key}
-            disabled={busy}
-            aria-current={section === key ? 'page' : undefined}
-            onClick={() => navigate(key)}
-          >
-            {label}
-          </button>
-        ))}
+        {tabs
+          .filter(([key]) => key !== 'history' || history)
+          .map(([key, label]) => (
+            <button
+              key={key}
+              disabled={busy}
+              aria-current={section === key ? 'page' : undefined}
+              onClick={() => navigate(key)}
+            >
+              {label}
+            </button>
+          ))}
         <div className="nav-note">
           TuiClean 0.1.0
           <br />
@@ -135,9 +119,14 @@ export function SettingsPanel({ settings, onPatch, demo = false }: Props) {
                 ? '你的偏好优先。白名单高于所有过滤规则。'
                 : section === 'rules'
                   ? '每条规则都有明确的依据，也可以单独关闭。'
-                  : '内容在本地检查，控制权留在你手里。'}
+                  : section === 'history'
+                    ? '回看命中过的内容，了解原因，也可以信任作者。'
+                    : '内容在本地检查，控制权留在你手里。'}
           </p>
         </div>
+        {section === 'history' && history ? (
+          <HistoryPanel source={history} settings={settings} onPatch={onPatch} />
+        ) : null}
         {section === 'general' ? (
           <>
             <section className="settings-section">
@@ -317,61 +306,31 @@ export function SettingsPanel({ settings, onPatch, demo = false }: Props) {
               <ul className="privacy-list">
                 <li>帖子文字、昵称和链接只在当前浏览器中检查。</li>
                 <li>设置、关键词、用户名规则及本地黑白名单保存在浏览器的本地存储中。</li>
-                <li>不收集浏览历史，不上传推文，不包含统计追踪。</li>
                 <li>
-                  “本地拉黑”仅保存本机规则；“X 拉黑”在你点击后操作 X 原生菜单，修改 X 黑名单。
+                  启用历史后，最近 1000
+                  条拦截的原文、账号、时间、原因和处理方式保存在本机，总量不超过 4
+                  MB，可关闭或清空。
+                </li>
+                <li>识别数据和拦截记录不上传，不包含统计追踪。</li>
+                <li>
+                  “本地拉黑”仅保存本机规则；“X 拉黑”在你点击后复用 X 网页登录态调用接口，修改 X
+                  黑名单。授权信息临时留在工作页内存中，不纳入备份。
                 </li>
               </ul>
               {demo ? <p className="small-note">这里是演示环境，修改只影响本次演示。</p> : null}
             </section>
-            <section className="settings-section">
-              <h2>备份与迁移</h2>
-              <p>备份只包含偏好和个人规则，不包含帖子、浏览历史或登录信息。</p>
-              <div className="button-row">
-                <button className="secondary" onClick={download}>
-                  导出设置
-                </button>
-                <label className="secondary file-button">
-                  选择备份文件
-                  <input
-                    type="file"
-                    accept=".json,application/json"
-                    onChange={(e) => {
-                      void readBackup(e.target.files?.[0]);
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
-              </div>
-              {pending ? (
-                <div className="notice">
-                  <strong>准备导入</strong>
-                  <p>
-                    {pending.keywords.length} 个关键词 · {pending.domains.length} 个域名 ·{' '}
-                    {pending.whitelist.length} 个白名单账号 · {pending.blockedUsers.length}{' '}
-                    个本地黑名单账号 · {pending.usernameRules.length}{' '}
-                    条用户名规则。应用后将替换当前设置。
-                  </p>
-                  <div className="button-row">
-                    <button
-                      className="primary"
-                      disabled={busy}
-                      onClick={async () => {
-                        if (await save(pending, '备份已应用。')) setPending(null);
-                      }}
-                    >
-                      应用备份
-                    </button>
-                    <button className="secondary" onClick={() => setPending(null)}>
-                      取消
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </section>
+            <BackupPanel
+              settings={settings}
+              onPatch={onPatch}
+              history={history}
+              busy={busy}
+              onBusyChange={setBusy}
+            />
             <section className="settings-section">
               <h2>恢复初始状态</h2>
-              <p>清空个人规则和白名单，恢复默认过滤偏好。建议先导出备份。</p>
+              <p>
+                清空个人规则和白名单，恢复默认过滤偏好。拦截记录请在历史页单独清空。建议先导出备份。
+              </p>
               {resetting ? (
                 <div className="button-row">
                   <button

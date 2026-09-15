@@ -9,11 +9,21 @@ const bodyMotion = /(?:胸口|胸部)[^，。！？]{0,8}(?:晃|抖|一起一伏
 const affair =
   /偷情|出轨|(?:老婆|媳妇|人妻)[^，。！？]{0,6}(?:背着|瞒着)[^，。！？]{0,6}(?:老公|丈夫)/u;
 const eroticTone = /尺度|上头|太[^，。！？]{0,4}撩|特别骚|(?:喘|叫)[^，。！？]{0,6}(?:骚|浪)/u;
+const bodyContext =
+  /胸部|乳房|身材|身体|身體|(?:丰满|豐滿)[^，。！？]{0,4}(?:摇晃|搖晃|晃动|晃動)/u;
+const intimateActivity =
+  /(?:下面|敏感点|敏感部位|私密部位|私密区域)[^，。！？]{0,10}(?:把玩|抚摸|揉捏|挑逗|互动|探索)|(?:身体|身體)(?:的)?私密(?:探索|互动)/u;
+const eroticResponse = /欲罢不能|意淫|血脉[喷贲]张/u;
 
 export function hasAdultReferral(value: string): boolean {
   const text = compactText(value);
   if (!platform.test(text) || !creator.test(text)) return false;
   if (explicitDetail.test(text) || intimateDetail.test(text)) return true;
+  // Euphemisms need all three signals. "Private" settings, intense sports and
+  // engaging reviews are ordinary recommendations, so arousal wording alone
+  // must not join the softer legacy score below.
+  if (bodyContext.test(text) && intimateActivity.test(text) && eroticResponse.test(text))
+    return true;
   // Physiological descriptions alone are common in ordinary exercise posts.
   // Softer wording needs two independent sexualized groups plus a destination.
   return [bodyMotion, affair, eroticTone].filter((pattern) => pattern.test(text)).length >= 2;

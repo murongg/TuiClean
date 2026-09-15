@@ -79,6 +79,129 @@ describe('X page adapter', () => {
 });
 
 describe('reversible page filtering', () => {
+  it('keeps a harmless reply visible for an NSFW-labelled name while honoring explicit keywords', () => {
+    const element = article('2301', '这个演示有公开版本吗？', 'sample_notes');
+    element.querySelector('[data-testid="User-Name"] span')!.textContent = 'Sample NSFW Notes';
+    const app = controller();
+    app.scan();
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(false);
+    expect(element.querySelector('[data-tuiclean-host]')).toBeNull();
+    app.updateSettings({ ...defaultSettings, keywords: ['nsfw'] });
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(true);
+    app.updateSettings(defaultSettings);
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(false);
+    expect(element.querySelector('[data-tuiclean-host]')).toBeNull();
+  });
+  it('folds both short-bait replies even if just one author is on the local blacklist', () => {
+    const first = article('2001', '不介入生活🌿只进入身体', 'sample_blocked');
+    const second = article('2002', '不介入生活🧩只进入身体', 'sample_new');
+    const app = controller();
+    app.updateSettings({ ...defaultSettings, blockedUsers: ['sample_blocked'] });
+    expect(first.hasAttribute('data-tuiclean-folded')).toBe(true);
+    expect(second.hasAttribute('data-tuiclean-folded')).toBe(true);
+    expect(
+      second.querySelector('[data-tuiclean-host]')!.shadowRoot!.querySelector('.reason')
+        ?.textContent,
+    ).toContain('身体');
+  });
+  it('folds a standalone euphemistic referral with a readable reason', () => {
+    const element = article(
+      '1901',
+      '抖音博主「虚构频道甲」分享身体私密探索片段，让人欲罢不能。',
+      'sample_referral',
+    );
+    const app = controller();
+    app.scan();
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(true);
+    expect(
+      element.querySelector('[data-tuiclean-host]')!.shadowRoot!.querySelector('.reason')
+        ?.textContent,
+    ).toContain('性暗示');
+  });
+  it('starts recording after a disabled pending capture is enabled again', async () => {
+    article('900', 'NSFW', 'sample_switch');
+    const onHistory = vi.fn().mockResolvedValue(undefined);
+    const app = createController({
+      document,
+      getUrl: () => 'https://x.com/home',
+      settings: defaultSettings,
+      onWhitelist: vi.fn(),
+      onHistory,
+    });
+    controllers.push(app);
+    app.scan();
+    app.updateSettings({ ...defaultSettings, historyEnabled: false });
+    await Promise.resolve();
+    expect(onHistory).not.toHaveBeenCalled();
+    app.updateSettings(defaultSettings);
+    await vi.waitFor(() => expect(onHistory).toHaveBeenCalledOnce());
+  });
+  it('records presented matches once per page without recording them again on rescans', async () => {
+    article('901', 'NSFW', 'sample_history');
+    const onHistory = vi.fn().mockResolvedValue(undefined);
+    const app = createController({
+      document,
+      getUrl: () => 'https://x.com/home',
+      settings: defaultSettings,
+      onWhitelist: vi.fn(),
+      onHistory,
+    });
+    controllers.push(app);
+    app.scan();
+    app.scan();
+    await vi.waitFor(() => expect(onHistory).toHaveBeenCalledOnce());
+    expect(onHistory).toHaveBeenCalledWith([
+      expect.objectContaining({ id: '901', action: 'folded' }),
+    ]);
+    onHistory.mockClear();
+    app.scan();
+    await Promise.resolve();
+    expect(onHistory).not.toHaveBeenCalled();
+    article('902', 'NSFW', 'sample_fresh');
+    app.scan();
+    await vi.waitFor(() =>
+      expect(onHistory).toHaveBeenCalledWith([expect.objectContaining({ id: '902' })]),
+    );
+  });
+  it('honors the history switch and records mark-only treatment accurately', async () => {
+    article('903', 'NSFW', 'sample_mark');
+    const onHistory = vi.fn().mockResolvedValue(undefined);
+    const app = createController({
+      document,
+      getUrl: () => 'https://x.com/home',
+      settings: { ...defaultSettings, historyEnabled: false, mode: 'mark' },
+      onWhitelist: vi.fn(),
+      onHistory,
+    });
+    controllers.push(app);
+    app.scan();
+    await Promise.resolve();
+    expect(onHistory).not.toHaveBeenCalled();
+    app.updateSettings({ ...defaultSettings, mode: 'mark' });
+    await vi.waitFor(() =>
+      expect(onHistory).toHaveBeenCalledWith([expect.objectContaining({ action: 'marked' })]),
+    );
+  });
+  it('keeps filtering usable when history storage rejects and retries on a later scan', async () => {
+    const element = article('904', 'NSFW', 'sample_retry');
+    const onHistory = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('合成历史存储错误'))
+      .mockResolvedValue(undefined);
+    const app = createController({
+      document,
+      getUrl: () => 'https://x.com/home',
+      settings: defaultSettings,
+      onWhitelist: vi.fn(),
+      onHistory,
+    });
+    controllers.push(app);
+    app.scan();
+    await vi.waitFor(() => expect(app.getStats().errors).toBe(1));
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(true);
+    app.scan();
+    await vi.waitFor(() => expect(onHistory).toHaveBeenCalledTimes(2));
+  });
   it('folds name solicitation with numeric bodies and keeps restoration available', () => {
     const explicit = article('801', '8', 'sample_seeking');
     explicit.querySelector('[data-testid="User-Name"]')!.innerHTML =

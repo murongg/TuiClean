@@ -59,7 +59,7 @@ describe('compact inline notice', () => {
     await vi.waitFor(() => expect(blockX).toHaveBeenCalledOnce());
     expect(setBlocked).not.toHaveBeenCalled();
     await vi.waitFor(() =>
-      expect(host.shadowRoot!.querySelector('[role="status"]')?.textContent).toContain('已提交'),
+      expect(host.shadowRoot!.querySelector('[role="status"]')?.textContent).toContain('已确认'),
     );
   });
   it('inserts below the actual text, never as a competing outer flex column', () => {

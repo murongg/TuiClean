@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 import { createController } from '../lib/controller';
 import { settingsStore, watchSettings } from '../lib/extension';
 import { blockOnX } from '../lib/blocking';
+import { historyClient } from '../lib/history-client';
 
 export default defineContentScript({
   matches: [
@@ -20,6 +21,7 @@ export default defineContentScript({
       settings,
       onBlock: settingsStore.setBlocked,
       onBlockX: blockOnX,
+      onHistory: historyClient.record,
       onWhitelist: async (author) => {
         const current = await settingsStore.get();
         await settingsStore.patch({
@@ -37,7 +39,7 @@ export default defineContentScript({
     });
     const onMessage = (
       message: unknown,
-      _sender: unknown,
+      _sender: { id?: string; url?: string },
       respond: (response: unknown) => void,
     ) => {
       const type = (message as { type?: string } | null)?.type;

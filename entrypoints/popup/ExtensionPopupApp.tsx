@@ -52,6 +52,9 @@ export default function ExtensionPopup() {
       onDemo={() => {
         void browser.tabs.create({ url: browser.runtime.getURL('/demo.html') });
       }}
+      onHistory={() => {
+        void browser.tabs.create({ url: `${browser.runtime.getURL('/options.html')}#history` });
+      }}
     />
   );
 }

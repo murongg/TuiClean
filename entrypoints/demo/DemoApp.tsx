@@ -7,6 +7,7 @@ import { Popup } from '../../components/Popup';
 import { SettingsPanel } from '../../components/SettingsPanel';
 import { defaultSettings, validateSettings, type Settings } from '../../lib/settings';
 import { createController, type PageStats } from '../../lib/controller';
+import { createHistoryStore } from '../../lib/history';
 import '../../components/theme.css';
 import './style.css';
 
@@ -61,10 +62,30 @@ const examples: Sample[] = [
   },
 ].map((post) => ({ ...post, links: [] }));
 
-export default function Demo() {
-  const [settings, setSettings] = useState<Settings>(() => validateSettings(defaultSettings));
+export default function Demo({ savedSettings }: { savedSettings?: Settings }) {
+  const [settings, setSettings] = useState<Settings>(() =>
+    validateSettings(savedSettings ?? defaultSettings),
+  );
+  const [previousSaved, setPreviousSaved] = useState(savedSettings);
+  // Replace only the trial preferences when saved rules change. Remounting the
+  // demo would also discard the user's draft, samples and reveal state.
+  if (previousSaved !== savedSettings) {
+    setPreviousSaved(savedSettings);
+    setSettings(validateSettings(savedSettings ?? defaultSettings));
+  }
   const latestSettings = useRef(settings);
   latestSettings.current = settings;
+  const [history] = useState(() => {
+    let rows: unknown = [];
+    return createHistoryStore({
+      read: async () => rows,
+      write: async (value) => {
+        rows = value;
+      },
+      shouldRecord: async () =>
+        latestSettings.current.enabled && latestSettings.current.historyEnabled,
+    });
+  });
   const [stats, setStats] = useState<PageStats | null>(null);
   const [posts, setPosts] = useState<Sample[]>(examples);
   const [draft, setDraft] = useState<Draft>({ text: '', author: '', name: '' });
@@ -76,6 +97,7 @@ export default function Demo() {
   const result = active ? (decisions.get(active) ?? null) : null;
   const [session, setSession] = useState(0);
   const [view, setView] = useState<'demo' | 'settings'>('demo');
+  const [initialSection, setInitialSection] = useState<'general' | 'history'>('general');
   const engine = useRef<ReturnType<typeof createController> | null>(null);
   // Keep the controller alive across preference changes so one-time reveals survive.
   useEffect(() => {
@@ -83,6 +105,7 @@ export default function Demo() {
       document,
       getUrl: () => 'https://x.com/demo_author/status/100',
       settings,
+      onHistory: history.record,
       onBlock: async (author, blocked) => {
         const next = validateSettings({
           ...latestSettings.current,
@@ -115,12 +138,18 @@ export default function Demo() {
   useEffect(() => {
     engine.current?.updateSettings(settings);
   }, [settings, session]);
+  function openSettings(section: 'general' | 'history') {
+    setInitialSection(section);
+    setView('settings');
+    window.scrollTo(0, 0);
+  }
   function resetDemo() {
+    void history.clear();
     setPosts(examples);
     setActiveId(null);
     setDraft({ text: '', author: '', name: '' });
     nextId.current = 1000;
-    setSettings(validateSettings(defaultSettings));
+    setSettings(validateSettings(savedSettings ?? defaultSettings));
     setSession((value) => value + 1);
   }
   function addSample(draft: Draft) {
@@ -147,14 +176,26 @@ export default function Demo() {
           <span className="demo-label">交互演示</span>
           <button
             className="secondary"
-            onClick={() => setView(view === 'demo' ? 'settings' : 'demo')}
+            onClick={() => {
+              if (view === 'demo') openSettings('general');
+              else {
+                setView('demo');
+                window.scrollTo(0, 0);
+              }
+            }}
           >
             {view === 'demo' ? '查看完整设置' : '返回演示'}
           </button>
         </div>
       </header>
       {view === 'settings' ? (
-        <SettingsPanel settings={settings} onPatch={patch} demo />
+        <SettingsPanel
+          settings={settings}
+          onPatch={patch}
+          history={history}
+          initialSection={initialSection}
+          demo
+        />
       ) : (
         <>
           <section className="demo-intro">
@@ -172,6 +213,11 @@ export default function Demo() {
                 演示与插件使用同一套识别和页面处理逻辑。
                 <br />
                 输入内容只在本页使用，刷新后清空。
+              </p>
+              <p>
+                {savedSettings
+                  ? '已读取扩展设置；扩展保存后会同步到这里。本页调整只用于试验，重置演示可恢复已保存的设置。'
+                  : '当前为独立网页演示，使用本页设置。测试扩展已保存的规则，请从插件打开体验演示。'}
               </p>
             </div>
           </section>
@@ -278,7 +324,8 @@ export default function Demo() {
                   onPatch={patch}
                   stats={stats}
                   onPause={() => engine.current?.togglePause()}
-                  onSettings={() => setView('settings')}
+                  onSettings={() => openSettings('general')}
+                  onHistory={() => openSettings('history')}
                   onDemo={resetDemo}
                 />
               </div>

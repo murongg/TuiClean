@@ -4,6 +4,7 @@ export interface Settings {
   enabled: boolean;
   adult: boolean;
   spam: boolean;
+  historyEnabled: boolean;
   mode: 'balanced' | 'mark';
   scope: 'all' | 'replies';
   keywords: string[];
@@ -18,6 +19,7 @@ export const defaultSettings: Settings = {
   enabled: true,
   adult: true,
   spam: true,
+  historyEnabled: true,
   mode: 'balanced',
   scope: 'all',
   keywords: [],
@@ -36,7 +38,7 @@ export function validateSettings(value: unknown): Settings {
   for (const key of Object.keys(data)) {
     if (!Object.hasOwn(defaultSettings, key)) throw new Error(`无法识别的设置：${key}`);
   }
-  for (const key of ['enabled', 'adult', 'spam'] as const) {
+  for (const key of ['enabled', 'adult', 'spam', 'historyEnabled'] as const) {
     if (data[key] !== undefined && typeof data[key] !== 'boolean')
       throw new Error('开关必须是布尔值。');
     result[key] = (data[key] ?? defaultSettings[key]) as boolean;

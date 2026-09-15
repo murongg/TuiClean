@@ -361,6 +361,11 @@ select {
   color: var(--muted);
   margin-top: 6px;
 }
+.popup-footer .history-link {
+  grid-column: 1 / -1;
+  justify-self: center;
+  padding: 7px 12px;
+}
 .error {
   font-size: 12px;
   color: var(--error);

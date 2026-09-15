@@ -14,6 +14,51 @@ const profile = '同城约ｐ · 主页私信';
 
 describe('adult promotion signal combinations with synthetic data', () => {
   it.each([
+    '抖音有位博主叫「虚构频道甲」，片段里丰满摇晃，下面温柔把玩，点开让人欲罢不能。',
+    '小红书博主「虚构频道乙」推荐胸部与敏感点的细致互动片段，称这些资源比意淫更过瘾。',
+    '快手博主「虚构频道丙」分享身体私密探索视频，画面让人血脉喷张。',
+    'B站主播「虚构频道丁」推荐身体的私密互动片段，看得血脉贲张。',
+  ])(
+    'recognizes euphemistic adult referrals from combined body, intimacy and arousal signals',
+    (text) => {
+      expect(inspect(sample(text), defaultSettings)).toMatchObject({
+        level: 'suspect',
+        category: 'adult',
+        rules: ['adult-referral'],
+      });
+    },
+  );
+  it('normalizes decorations in the euphemistic combination', () => {
+    const text = '抖音博主「虚构频道甲」分享身体私密探索片段，让人欲罢不能。';
+    expect(inspect(sample([...text].join('\u200b 🌿')), defaultSettings).rules).toContain(
+      'adult-referral',
+    );
+  });
+  it.each([
+    '快手博主「虚构代码课」分享私密设置和敏感数据处理，学习过程让人欲罢不能。',
+    '抖音博主「示例影评」分析剧情高潮，影片让人血脉喷张。',
+    '小红书博主「示例教练」讲胸部训练互动挑战，比赛让人血脉喷张。',
+    'B站博主「示例硬件」讲传感器敏感点的互动设计，实验让人欲罢不能。',
+    '小红书博主「示例读书」分析丰满的人物塑造，下面展示可把玩的模型，看得欲罢不能。',
+    '快手博主「示例运动」分享身体动作探索，挑战很精彩。',
+    '虚构文本谈及身体私密探索，令人欲罢不能，但没有推荐站外账号。',
+    '抖音博主「示例护理」分享身体私密部位的护理流程。',
+  ])(
+    'preserves ordinary recommendations and discussion without the full new combination',
+    (text) => {
+      expect(inspect(sample(text), defaultSettings).level).toBe('allow');
+    },
+  );
+  it('keeps contextual protection and controls for euphemistic referrals', () => {
+    const post = sample('抖音博主「虚构频道甲」分享身体私密探索片段，让人欲罢不能。');
+    expect(inspect({ ...post, text: '科普：' + post.text }, defaultSettings).level).toBe('allow');
+    expect(inspect(post, { ...defaultSettings, adult: false }).level).toBe('allow');
+    expect(inspect(post, { ...defaultSettings, disabledRules: ['adult-referral'] }).level).toBe(
+      'allow',
+    );
+    expect(inspect(post, { ...defaultSettings, whitelist: ['sample_author'] }).level).toBe('allow');
+  });
+  it.each([
     '虚构账号甲 · 寻固炮',
     '样本乙（寻炮友）',
     '示例丙 · 找长期炮友',

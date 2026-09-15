@@ -2,6 +2,7 @@ import { inspectBatch, type Post } from './detector';
 import type { Settings } from './settings';
 import { readPost, supportedPage, threadRootId } from './page';
 import { noticeInPlace, pageStyle, present } from './presentation';
+import { historyMatch, type HistoryMatch } from './history';
 
 export interface PageStats {
   scanned: number;
@@ -19,6 +20,7 @@ interface Options {
   onBlock?: (author: string, blocked: boolean) => Promise<Settings>;
   onBlockX?: (article: Element, post: Post, signal: AbortSignal) => Promise<void>;
   onStats?: (stats: PageStats) => void;
+  onHistory?: (entries: HistoryMatch[]) => Promise<void>;
 }
 
 export function createController(options: Options) {
@@ -32,6 +34,7 @@ export function createController(options: Options) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let navigationTimer: ReturnType<typeof setInterval> | undefined;
   const visibility = new Map<string, 'expanded' | 'folded' | 'dismissed'>();
+  const recorded = new Set<string>();
   const mounted = new Map<Element, { key: string; host: HTMLElement; folded: boolean }>();
   let stats: PageStats = { scanned: 0, folded: 0, marked: 0, paused, supported: false, errors: 0 };
   const stylesheet = doc.createElement('style');
@@ -73,6 +76,7 @@ export function createController(options: Options) {
         url = nextUrl;
         paused = false;
         visibility.clear();
+        recorded.clear();
         for (const el of mounted.keys()) restore(el);
       }
       const supported = supportedPage(url, settings.scope);
@@ -112,6 +116,7 @@ export function createController(options: Options) {
         settings,
         threadRootId(url),
       );
+      const records: HistoryMatch[] = [];
       for (const { element, post } of candidates) {
         try {
           const decision = decisions.get(post)!;
@@ -180,10 +185,35 @@ export function createController(options: Options) {
           }
           if (folded) stats.folded++;
           else stats.marked++;
+          if (settings.historyEnabled && options.onHistory && !recorded.has(post.id)) {
+            try {
+              const record = historyMatch(post, decision, folded);
+              if (record) {
+                records.push(record);
+                recorded.add(post.id);
+              }
+            } catch {
+              stats.errors++;
+            }
+          }
         } catch {
           restore(element);
           stats.errors++;
         }
+      }
+      if (records.length) {
+        // Remember before the async write: rescans and virtualized DOM remounts
+        // must not duplicate records or refill a history just cleared by the user.
+        void Promise.resolve()
+          .then(() => {
+            if (!stopped && settings.historyEnabled) return options.onHistory!(records);
+          })
+          .catch(() => {
+            if (stopped) return;
+            for (const row of records) recorded.delete(row.id);
+            stats.errors++;
+            options.onStats?.({ ...stats });
+          });
       }
     } finally {
       observe();
@@ -194,6 +224,8 @@ export function createController(options: Options) {
     scan,
     getStats: () => ({ ...stats }),
     updateSettings(next: Settings) {
+      if ((!settings.enabled || !settings.historyEnabled) && next.enabled && next.historyEnabled)
+        recorded.clear();
       settings = next;
       scan();
     },
@@ -220,6 +252,7 @@ export function createController(options: Options) {
       for (const element of mounted.keys()) restore(element);
       stylesheet.remove();
       visibility.clear();
+      recorded.clear();
     },
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inspect, normalizeText } from '../lib/detector';
+import { inspect, inspectBatch, normalizeText } from '../lib/detector';
 import { defaultSettings } from '../lib/settings';
 
 const post = (text: string, author = 'sample_account', links: string[] = []) => ({
@@ -11,6 +11,53 @@ const post = (text: string, author = 'sample_account', links: string[] = []) => 
 });
 
 describe('local detection with synthetic content', () => {
+  it.each([
+    '虚构样本：不进入你的生活，只进入你的身体。',
+    '不介入生活🌿只进入身体',
+    '不走进你的生活，只想走进你的身体',
+    '不進入你的生活，只進入你的身體',
+  ])('recognizes complete relationship/body bait without a peer or a suspicious name', (text) => {
+    expect(inspect(post(text), defaultSettings)).toMatchObject({
+      level: 'suspect',
+      category: 'adult',
+      rules: ['adult-bait'],
+    });
+  });
+  it('independently detects decorated short bait even when only its peer is locally blocked', () => {
+    const first = post('不介入生活🌿只进入身体', 'sample_one');
+    const second = { ...post('不介入生活🧩只进入身体', 'sample_two'), id: '102' };
+    const decisions = inspectBatch(
+      [first, second],
+      { ...defaultSettings, blockedUsers: ['sample_one'] },
+      '100',
+    );
+    expect(decisions.get(first)?.rules).toEqual(['blocked-user']);
+    expect(decisions.get(second)?.rules).toEqual(['adult-bait']);
+    expect(inspect(second, defaultSettings).rules).toEqual(['adult-bait']);
+    expect(
+      inspect({ ...second, text: [...second.text].join('\u200b') }, defaultSettings).rules,
+    ).toEqual(['adult-bait']);
+  });
+  it.each([
+    '不介入别人的生活，只关注自己的身体健康。',
+    '不介入生活，也不进入身体。',
+    '只进入身体。',
+    '不介入生活。',
+    '相同的简短感谢。',
+    '科普：识别“不介入生活，只进入身体”这类引流话术。',
+  ])('keeps ordinary, incomplete and educational short phrases visible', (text) => {
+    expect(inspect(post(text), defaultSettings).level).toBe('allow');
+  });
+  it('keeps category, rule and whitelist controls for relationship/body bait', () => {
+    const input = post('不介入生活，只进入身体');
+    expect(inspect(input, { ...defaultSettings, adult: false }).level).toBe('allow');
+    expect(inspect(input, { ...defaultSettings, disabledRules: ['adult-bait'] }).level).toBe(
+      'allow',
+    );
+    expect(inspect(input, { ...defaultSettings, whitelist: ['sample_account'] }).level).toBe(
+      'allow',
+    );
+  });
   it('leaves ordinary project sharing alone', () => {
     expect(
       inspect(
@@ -37,12 +84,59 @@ describe('local detection with synthetic content', () => {
       'allow',
     );
   });
-  it('keeps display-name-only evidence tentative rather than declaring a violation', () => {
+  it('does not infer adult content from a topic label in the name and an ordinary link', () => {
     const input = {
       ...post('新项目，主页链接可以查看。', 'sample_author', ['https://example.test/project']),
-      name: 'NSFW Research',
+      name: 'Sample NSFW Notes',
     };
-    expect(inspect(input, defaultSettings).level).not.toBe('block');
+    expect(inspect(input, defaultSettings).level).toBe('allow');
+  });
+  it.each([
+    '虚构 NSFW 画室',
+    '虚构 ＮＳＦＷ 画室',
+    '虚构 N\u200bSFW 画室',
+    'Sample OnlyFans Lab',
+    'Sample Porn Notes',
+    'Sample Nudes Notes',
+  ])('does not classify an ordinary reply from an adult topic label in the name: %s', (name) => {
+    expect(inspect({ ...post('这个演示有公开版本吗？'), name }, defaultSettings)).toEqual({
+      level: 'allow',
+      rules: [],
+      reasons: [],
+    });
+  });
+  it('keeps explicit adult offers in display names eligible for filtering', () => {
+    for (const name of ['虚构作者 · 成人资源', '虚构作者 · 裸聊', '虚构作者 · 无码资源']) {
+      expect(inspect({ ...post('合成留言'), name }, defaultSettings)).toMatchObject({
+        level: 'suspect',
+        rules: ['adult-hint'],
+      });
+    }
+  });
+  it('keeps body evidence and other independent rules when the name contains a topic label', () => {
+    const name = 'Sample NSFW Notes';
+    expect(inspect({ ...post('NSFW'), name }, defaultSettings)).toMatchObject({
+      level: 'suspect',
+      rules: ['adult-hint'],
+    });
+    expect(inspect({ ...post('成人资源，私信获取链接'), name }, defaultSettings)).toMatchObject({
+      level: 'block',
+      rules: ['adult-solicitation'],
+    });
+    expect(inspect({ ...post('刷单返佣，私信领取任务'), name }, defaultSettings).rules).toEqual([
+      'spam-solicitation',
+    ]);
+    expect(
+      inspect({ ...post('合成普通留言'), name }, defaultSettings, { templateAuthors: 2 }).rules,
+    ).toEqual(['spam-template']);
+    const input = { ...post('合成普通留言'), name };
+    expect(inspect(input, { ...defaultSettings, keywords: ['nsfw'] }).rules).toEqual([
+      'custom-keyword',
+    ]);
+    expect(
+      inspect(input, { ...defaultSettings, keywords: ['nsfw'], whitelist: ['sample_account'] })
+        .level,
+    ).toBe('allow');
   });
   it('protects educational and warning contexts', () => {
     expect(
@@ -85,6 +179,19 @@ describe('local detection with synthetic content', () => {
     expect(
       inspect(post('普通内容 sample'), { ...defaultSettings, keywords: ['[sample]'] }).level,
     ).toBe('allow');
+  });
+  it('matches a configured literal following an emoji in either body or display name', () => {
+    const settings = { ...defaultSettings, keywords: ['青杉词'] };
+    for (const input of [
+      post('虚构测试作者🍑青杉词'),
+      { ...post('1'), name: '虚构测试作者🍑青杉词' },
+    ]) {
+      expect(inspect(input, settings)).toMatchObject({
+        level: 'block',
+        rules: ['custom-keyword'],
+        reasons: ['命中你的关键词：青杉词'],
+      });
+    }
   });
   it('matches domains at hostname boundaries only', () => {
     const settings = { ...defaultSettings, domains: ['ads.example.test'] };

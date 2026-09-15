@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const fake = vi.hoisted(() => ({
   data: {} as Record<string, unknown>,
+  historyRequests: [] as unknown[],
   storageListeners: new Set<(changes: unknown, area: string) => void>(),
   messages: new Set<
     (message: unknown, sender: unknown, respond: (value: unknown) => void) => void
@@ -23,6 +24,12 @@ vi.mock('wxt/browser', () => ({
       },
     },
     runtime: {
+      id: 'sample_extension',
+      getURL: (path: string) => 'chrome-extension://sample_extension' + path,
+      sendMessage: async (message: unknown) => {
+        fake.historyRequests.push(message);
+        return { ok: true };
+      },
       onMessage: {
         addListener: (fn: never) => fake.messages.add(fn),
         removeListener: (fn: never) => fake.messages.delete(fn),
@@ -36,6 +43,7 @@ afterEach(() => {
   invalidate?.();
   invalidate = undefined;
   fake.data = {};
+  fake.historyRequests = [];
   fake.storageListeners.clear();
   fake.messages.clear();
   vi.unstubAllGlobals();
@@ -43,6 +51,20 @@ afterEach(() => {
 });
 
 describe('extension entrypoint wiring', () => {
+  it('ignores history writes when subscribing to settings changes', async () => {
+    const { watchSettings } = await import('../lib/extension');
+    const changed = vi.fn();
+    const stop = watchSettings(changed);
+    fake.storageListeners.forEach((listener) =>
+      listener({ 'tuiclean:history': { newValue: [] } }, 'local'),
+    );
+    expect(changed).not.toHaveBeenCalled();
+    fake.storageListeners.forEach((listener) =>
+      listener({ 'tuiclean:historyEnabled': { newValue: false } }, 'local'),
+    );
+    expect(changed).toHaveBeenCalledOnce();
+    stop();
+  });
   it('loads local preferences, answers popup messages, reacts to changes and cleans up', async () => {
     vi.stubGlobal('defineContentScript', (definition: unknown) => definition);
     vi.stubGlobal('location', { href: 'https://x.com/sample_user/status/100' });
@@ -57,6 +79,18 @@ describe('extension entrypoint wiring', () => {
       },
     } as never);
     expect(document.querySelector('[data-tuiclean-folded]')).not.toBeNull();
+    await vi.waitFor(() =>
+      expect(fake.historyRequests).toContainEqual(
+        expect.objectContaining({
+          type: 'tuiclean:history',
+          action: 'record',
+          entries: [expect.objectContaining({ id: '101', author: 'sample_ad', action: 'folded' })],
+        }),
+      ),
+    );
+    expect(fake.historyRequests).toMatchObject([
+      { entries: [{ text: '刷单返佣，私信领取任务。' }] },
+    ]);
     const reply = vi.fn();
     fake.messages.forEach((listener) => listener({ type: 'tuiclean:stats' }, {}, reply));
     expect(reply).toHaveBeenCalledWith(expect.objectContaining({ folded: 1, scanned: 1 }));

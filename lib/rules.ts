@@ -9,20 +9,22 @@ export const RULES = [
     id: 'adult-hint',
     category: 'adult',
     name: '疑似成人内容',
-    description: '出现成人内容线索但证据不足，标为疑似；按所选模式折叠或标注。',
+    description:
+      '正文出现成人内容线索，或昵称包含成人服务、资源表述时标为疑似；昵称里的 NSFW 等通用标签不会单独触发。',
   },
   {
     id: 'adult-bait',
     category: 'adult',
     name: '挑逗式引流话术',
-    description: '匹配完整的成对自我比较话术，忽略表情和隐形字符；单条内容也可识别。',
+    description:
+      '匹配完整的挑逗比较或关系与身体对照话术，忽略表情和隐形字符；短句与单条内容也可识别。',
   },
   {
     id: 'adult-referral',
     category: 'adult',
     name: '站外成人内容引流',
     description:
-      '其他平台的博主推荐，加上露骨描述或多组性暗示。普通健身与软件分享不因平台名称单独命中。',
+      '其他平台的博主推荐，加上露骨描述或身体、私密互动与性暗示感受等组合。普通健身与软件分享不因平台名称单独命中。',
   },
   {
     id: 'adult-profile',
@@ -59,8 +61,11 @@ export const RULES = [
   },
 ] as const;
 
-export const adultPattern =
-  /裸聊|约炮|福利姬|成人资源|成人视频|私房视频|无码资源|色情|\bporn\b|\bnudes?\b|\bonlyfans\b|\bnsfw\b/i;
+export const adultOfferPattern = /裸聊|约炮|福利姬|成人资源|成人视频|私房视频|无码资源/i;
+export const adultPattern = new RegExp(
+  `${adultOfferPattern.source}|色情|\\bporn\\b|\\bnudes?\\b|\\bonlyfans\\b|\\bnsfw\\b`,
+  'i',
+);
 export const spamPattern =
   /刷单返佣|代开发票|代办证件|博彩|娱乐城|稳赚不赔|保本高收益|免费领币|包赢|日赚\d+|guaranteed\s*(?:profit|returns)|double\s*your\s*(?:money|crypto)/i;
 export const contactPattern =
@@ -78,5 +83,12 @@ const teasingFirst = `比我${teasing}${comparison}${appearance}`;
 const separator = '[\\p{P}]{0,4}';
 export const comparisonBaitPattern = new RegExp(
   `(?:${appearanceFirst}${separator}${teasingFirst}|${teasingFirst}${separator}${appearanceFirst})`,
+  'u',
+);
+
+// This is a specific solicitation phrase family, not short-text repetition.
+// Keep both halves adjacent so greetings and ordinary health remarks stay out.
+export const bodyOnlyBaitPattern = new RegExp(
+  `不(?:进入|進入|介入|走进|走進)(?:你的)?生活${separator}只(?:想|会|會)?(?:进入|進入|走进|走進)(?:你的)?(?:身体|身體)`,
   'u',
 );

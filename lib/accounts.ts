@@ -1,3 +1,22 @@
+import type { Settings } from './settings';
+
+export interface LocalBlockResult {
+  added: string[];
+  skipped: string[];
+}
+
+export function planLocalBlocks(authors: readonly string[], settings: Settings): LocalBlockResult {
+  if (authors.length > 1000) throw new Error('单次最多处理 1000 个账号。');
+  const unique = [...new Set(authors.map(normalizeUsername))];
+  const excluded = new Set(
+    [...settings.whitelist, ...settings.blockedUsers].map((name) => name.toLowerCase()),
+  );
+  return {
+    added: unique.filter((name) => !excluded.has(name)),
+    skipped: unique.filter((name) => excluded.has(name)),
+  };
+}
+
 export function normalizeUsername(value: string): string {
   const name = value.trim().replace(/^@/, '').toLowerCase();
   if (!/^[a-z0-9_]{1,15}$/.test(name))

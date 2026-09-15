@@ -11,3 +11,7 @@ Use synthetic content and fictional accounts in tests. Never copy real user post
 ## Display behavior
 
 Matched content folds by default, including tentative matches and template repetition. Preserve the explicit mark-only option. Expanding a post must keep its toolbar and allow folding again; only explicit dismissal or removing the match should remove the toolbar. Keep expansion, folding and dismissal as separate states.
+
+## Installed updates
+
+A successful build does not update every installed copy. Chrome may load a separate directory under UnpackedExtensions after importing a ZIP. Verify the actual loaded directory before telling the user that reloading alone applies a build. If it differs, update that code directory or provide concrete copy instructions; keep the installed extension and its data instead of recommending an uninstall.

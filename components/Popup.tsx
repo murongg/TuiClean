@@ -10,6 +10,7 @@ export interface PopupProps {
   onPause: () => void;
   onSettings: () => void;
   onDemo: () => void;
+  onHistory?: () => void;
   error?: string;
   busy?: boolean;
 }
@@ -21,6 +22,7 @@ export function Popup({
   onPause,
   onSettings,
   onDemo,
+  onHistory,
   error,
   busy,
 }: PopupProps) {
@@ -150,6 +152,11 @@ export function Popup({
         <button className="secondary" onClick={onDemo}>
           体验演示
         </button>
+        {onHistory ? (
+          <button className="text-button history-link" onClick={onHistory}>
+            拦截记录
+          </button>
+        ) : null}
         <p>开源 · 无需账号 · 文字识别</p>
       </footer>
     </main>
