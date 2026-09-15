@@ -1,0 +1,7 @@
+node_modules
+.output
+.wxt
+work
+docs/plans
+docs/specs
+coverage

@@ -1,0 +1,10 @@
+X logo asset attribution
+
+Source: X Brand Toolkit, https://about.x.com/en/who-we-are/brand-toolkit
+Asset: https://about.x.com/content/dam/about-twitter/x/brand-toolkit/x-logo.zip (logo.svg)
+Retrieved: 2026-09-15
+
+The X symbol is reproduced from the official vector asset with its proportions preserved. TuiClean adds a white tile and a separate blue broom symbol. This attribution covers public/mark.svg and its derived PNG icons.
+
+The X name and logo belong to X Corp. This third-party brand asset is not relicensed under TuiClean's MIT license. See the source toolkit for its brand guidelines.
+TuiClean is an independent extension, not an official X product.

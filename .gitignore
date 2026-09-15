@@ -1,0 +1,8 @@
+node_modules/
+.output/
+.wxt/
+coverage/
+work/
+.DS_Store
+docs/plans/
+docs/specs/

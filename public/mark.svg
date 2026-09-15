@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 40 40">
+  <!-- X mark from the official X Brand Toolkit. TuiClean adds the tile and blue broom; see licenses/x.txt. -->
+  <rect x=".5" y=".5" width="39" height="39" rx="10" fill="#fff" stroke="#e3e5e9"/>
+  <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" transform="translate(9.2 8.96267) scale(.018)" fill="#191b1f"/>
+  <g transform="translate(29 25) rotate(32)">
+    <path d="M0-13V1" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+    <path d="M-2.5.5h5l3.5 9h-12Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M0-13V1" stroke="#2563eb" stroke-width="2.7" stroke-linecap="round"/>
+    <path d="M-2.5.5h5l3.5 9h-12Z" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round"/>
+    <path d="M-1.7 4-2.7 8.2M1.7 4l1 4.2" stroke="#fff" stroke-width=".8" stroke-linecap="round"/>
+  </g>
+</svg>

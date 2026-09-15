@@ -1,0 +1,265 @@
+.settings-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 36px 64px;
+}
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 30px 0;
+  border-bottom: 1px solid var(--line);
+}
+.settings-layout {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  gap: 64px;
+  margin-top: 48px;
+}
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+.settings-nav > button {
+  border: 0;
+  text-align: left;
+  background: transparent;
+  border-radius: 6px;
+  padding: 12px 15px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.settings-nav > button:hover {
+  background: var(--tint);
+}
+.settings-nav > button[aria-current='page'] {
+  background: var(--accent-surface);
+  color: var(--accent);
+  font-weight: 600;
+}
+.nav-note {
+  margin: 35px 15px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+.settings-content {
+  max-width: 640px;
+  min-width: 0;
+}
+.settings-title {
+  margin-bottom: 36px;
+}
+.settings-title h1 {
+  font-size: 30px;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.settings-title p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+.settings-section {
+  margin-bottom: 30px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid var(--line);
+}
+.settings-section > h2 {
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+.settings-section > p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 15px;
+}
+.settings-section .toggle-row {
+  padding: 18px 0;
+}
+.settings-section .row-title {
+  font-size: 14px;
+}
+.settings-section .toggle-row p {
+  font-size: 12px;
+}
+.choice-list {
+  display: grid;
+  gap: 12px;
+}
+.choice-list label {
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.choice-list label:has(input:checked) {
+  background: var(--accent-surface);
+  border-color: var(--accent-line);
+}
+.choice-list input {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+.choice-list strong {
+  font-size: 13px;
+  display: block;
+}
+.choice-list small {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.select-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.select-row select {
+  border: 1px solid var(--line);
+  padding: 9px 12px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  max-width: 65%;
+}
+.notice {
+  border: 1px solid var(--line);
+  background: var(--tint);
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-top: 20px;
+  font-size: 13px;
+}
+.notice strong {
+  font-weight: 600;
+}
+.notice p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.personal-form {
+  display: grid;
+  gap: 26px;
+}
+.personal-form > label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.personal-form label > span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.personal-form textarea {
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 13px 15px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text);
+  background: var(--surface);
+  min-height: 90px;
+}
+.personal-form textarea::placeholder {
+  color: var(--muted);
+}
+.save-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.save-row > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.button-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+.file-button {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.file-button:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.privacy-list {
+  padding-left: 19px;
+  line-height: 2.2;
+  font-size: 13px;
+  color: var(--muted);
+}
+.rules-list {
+  border: 0;
+}
+@media (max-width: 700px) {
+  .settings-shell {
+    padding: 0 20px 40px;
+  }
+  .site-header {
+    padding: 20px 0;
+  }
+  .site-header .secondary {
+    padding: 9px;
+    font-size: 11px;
+  }
+  .settings-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-top: 24px;
+  }
+  .settings-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
+  }
+  .settings-nav > button {
+    white-space: nowrap;
+    font-size: 12px;
+    padding: 10px;
+  }
+  .nav-note {
+    display: none;
+  }
+  .settings-title h1 {
+    font-size: 25px;
+  }
+  .settings-title {
+    margin-bottom: 25px;
+  }
+  .save-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
