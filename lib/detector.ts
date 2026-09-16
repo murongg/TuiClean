@@ -1,13 +1,5 @@
 import type { Settings } from './settings';
-import {
-  adultPattern,
-  adultOfferPattern,
-  spamPattern,
-  contactPattern,
-  contextPattern,
-  comparisonBaitPattern,
-  bodyOnlyBaitPattern,
-} from './rules';
+import { DEFAULT_RULES, type RuleSet } from './rules';
 import { compactText, normalizeText } from './text';
 import { findTemplates } from './templates';
 import { hasAdultProfile, hasAdultReferral, hasProfileSpam } from './promotion';
@@ -43,7 +35,17 @@ export function inspect(
   post: Post,
   settings: Settings,
   evidence: { templateAuthors?: number } = {},
+  rules: RuleSet = DEFAULT_RULES,
 ): Decision {
+  const {
+    adultPattern,
+    adultOfferPattern,
+    spamPattern,
+    contactPattern,
+    contextPattern,
+    comparisonBaitPattern,
+    bodyOnlyBaitPattern,
+  } = rules;
   if (
     !settings.enabled ||
     settings.whitelist.some((name) => name.toLowerCase() === post.author.toLowerCase())
@@ -88,7 +90,7 @@ export function inspect(
     settings.adult &&
     active('adult-profile') &&
     !contextPattern.test(name) &&
-    hasAdultProfile(name)
+    hasAdultProfile(name, rules)
   ) {
     return result(
       'suspect',
@@ -102,7 +104,7 @@ export function inspect(
     active('spam-profile') &&
     !contextPattern.test(name) &&
     !post.hasMedia &&
-    hasProfileSpam(name, text)
+    hasProfileSpam(name, text, rules)
   ) {
     return result(
       'suspect',
@@ -115,7 +117,7 @@ export function inspect(
   // A quoted warning or educational discussion is not a solicitation. Explicit
   // user rules above remain authoritative; built-in heuristics fail open here.
   if (contextPattern.test(text)) return allow();
-  if (settings.adult && active('adult-referral') && hasAdultReferral(text)) {
+  if (settings.adult && active('adult-referral') && hasAdultReferral(text, rules)) {
     return result(
       'suspect',
       'adult',
@@ -177,6 +179,7 @@ export function inspectBatch(
   posts: readonly Post[],
   settings: Settings,
   rootId: string | null,
+  rules: RuleSet = DEFAULT_RULES,
 ): Map<Post, Decision> {
   const whitelist = new Set(settings.whitelist.map((author) => author.toLowerCase()));
   const templates =
@@ -188,7 +191,7 @@ export function inspectBatch(
   return new Map(
     posts.map((post) => [
       post,
-      inspect(post, settings, { templateAuthors: templates.get(post.id) }),
+      inspect(post, settings, { templateAuthors: templates.get(post.id) }, rules),
     ]),
   );
 }

@@ -1,6 +1,6 @@
 # TuiClean 隐私说明
 
-适用版本：0.1.1。更新日期：2026-09-15。
+适用版本：0.1.1。更新日期：2026-09-16。
 
 ## 本地处理
 
@@ -16,9 +16,13 @@ TuiClean 在当前浏览器中读取已加载帖文的文字、显示名称、@�
 
 ## 网络、凭证与权限
 
-文字过滤和本地名单不发起额外网络请求，不包含遥测、广告追踪或外部模型调用。只有用户主动发起 X 拉黑时，扩展才通过 X 网页内部接口读取对应原帖并提交拉黑请求。数据只发送到当前 X / Twitter 站点，不发送到 TuiClean 或其他服务器。
+文字过滤和本地名单不发起额外网络请求，不包含遥测、广告追踪或外部模型调用。用户主动发起 X 拉黑时，扩展才通过 X 网页内部接口读取对应原帖并提交拉黑请求，相关数据只发送到当前 X / Twitter 站点。
 
-扩展声明 `storage`、`scripting` 及 `x.com`、`twitter.com`（含 www）的 HTTPS 站点访问权限。`scripting` 用于在专用 X 工作页调用接口执行器。不请求 `cookies`、`history`、`webRequest` 或全站权限。
+用户点击“更新规则”时，扩展会从本项目 GitHub 仓库的固定地址下载规则数据：`https://raw.githubusercontent.com/murongg/TuiClean/main/rules/builtin.json`。请求不附带 Cookie、X 授权信息、帖子、个人名单或自定义规则，也不发送来源页面地址。GitHub 可能接收到 IP 地址等建立网络连接所需的信息。没有定时后台检查；不点击更新时，过滤使用已缓存或随扩展提供的规则。
+
+规则包仅包含词表、规则说明、版本和日期。更新成功后，数据包及最近检查／应用时间保存在本机；失败时保留原规则，可通过“恢复内置规则”删除规则缓存。规则缓存与个人设置、历史记录分开保存，不纳入个人数据备份。不会下载或执行远程脚本。
+
+扩展声明 `storage`、`scripting` 及 `x.com`、`twitter.com`（含 www）和 `raw.githubusercontent.com` 的 HTTPS 站点访问权限。`scripting` 用于在专用 X 工作页调用接口执行器；GitHub 域名权限只用于用户主动下载固定地址的规则包。不请求 `cookies`、`history`、`webRequest` 或全站权限。
 
 Firefox 构建额外声明 `authenticationInfo` 和 `websiteActivity` 数据类型，用于说明用户主动发起的 X 授权请求及账号操作。这不表示数据会发送给 TuiClean 或第三方分析服务。
 

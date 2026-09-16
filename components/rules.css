@@ -1,0 +1,19 @@
+.rule-updates {
+  padding-bottom: 24px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.rule-update-heading,
+.rule-update-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.rule-update-actions {
+  margin: 14px 0;
+}
+.rule-update-heading h2 {
+  margin-bottom: 6px;
+}

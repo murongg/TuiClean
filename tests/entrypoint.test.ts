@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { BUNDLED_RULE_PACK } from '../lib/rule-pack';
+import { RULES_KEY } from '../lib/rule-updates';
 
 const fake = vi.hoisted(() => ({
   data: {} as Record<string, unknown>,
@@ -51,6 +53,30 @@ afterEach(() => {
 });
 
 describe('extension entrypoint wiring', () => {
+  it('loads a cached rule pack and reacts to a rule-only storage update', async () => {
+    const pack = structuredClone(BUNDLED_RULE_PACK);
+    pack.version++;
+    pack.terms.adultOffers.push('合成缓存词');
+    fake.data[RULES_KEY] = { pack, checkedAt: 1000, updatedAt: 1000 };
+    vi.stubGlobal('defineContentScript', (definition: unknown) => definition);
+    vi.stubGlobal('location', { href: 'https://x.com/sample_user/status/100' });
+    document.body.innerHTML =
+      '<article data-testid="tweet"><div><a href="https://x.com/sample_cached/status/5301"><time>示例时间</time></a><div data-testid="tweetText">合成缓存词</div></div></article>';
+    const entry = await import('../entrypoints/filter.content');
+    await entry.default.main({
+      isInvalid: false,
+      isValid: true,
+      onInvalidated: (fn: () => void) => {
+        invalidate = fn;
+      },
+    } as never);
+    expect(document.querySelector('[data-tuiclean-folded]')).not.toBeNull();
+    delete fake.data[RULES_KEY];
+    fake.storageListeners.forEach((fn) => fn({ [RULES_KEY]: {} }, 'local'));
+    await vi.waitFor(() => expect(document.querySelector('[data-tuiclean-folded]')).toBeNull());
+    invalidate?.();
+    expect(fake.storageListeners.size).toBe(0);
+  });
   it('ignores history writes when subscribing to settings changes', async () => {
     const { watchSettings } = await import('../lib/extension');
     const changed = vi.fn();

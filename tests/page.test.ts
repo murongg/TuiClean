@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readPost } from '../lib/page';
 import { createController } from '../lib/controller';
 import { defaultSettings } from '../lib/settings';
+import { BUNDLED_RULE_PACK } from '../lib/rule-pack';
+import { compileRules, DEFAULT_RULES } from '../lib/rules';
 
 function article(id = '101', text = '成人资源，私信获取完整链接', author = 'sample_user') {
   const element = document.createElement('article');
@@ -79,6 +81,20 @@ describe('X page adapter', () => {
 });
 
 describe('reversible page filtering', () => {
+  it('rescans existing posts when the active rule package changes and restores removed matches', () => {
+    const element = article('5201', '合成在线词', 'sample_online');
+    const app = controller();
+    app.scan();
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(false);
+    const pack = structuredClone(BUNDLED_RULE_PACK);
+    pack.version++;
+    pack.terms.adultOffers.push('合成在线词');
+    app.updateRules(compileRules(pack));
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(true);
+    app.updateRules(DEFAULT_RULES);
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(false);
+    expect(element.querySelector('[data-tuiclean-host]')).toBeNull();
+  });
   it('keeps a harmless reply visible for an NSFW-labelled name while honoring explicit keywords', () => {
     const element = article('2301', '这个演示有公开版本吗？', 'sample_notes');
     element.querySelector('[data-testid="User-Name"] span')!.textContent = 'Sample NSFW Notes';

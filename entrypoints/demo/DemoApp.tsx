@@ -8,6 +8,7 @@ import { SettingsPanel } from '../../components/SettingsPanel';
 import { defaultSettings, validateSettings, type Settings } from '../../lib/settings';
 import { createController, type PageStats } from '../../lib/controller';
 import { createHistoryStore } from '../../lib/history';
+import { DEFAULT_RULES, type RuleSet } from '../../lib/rules';
 import '../../components/theme.css';
 import './style.css';
 
@@ -62,7 +63,13 @@ const examples: Sample[] = [
   },
 ].map((post) => ({ ...post, links: [] }));
 
-export default function Demo({ savedSettings }: { savedSettings?: Settings }) {
+export default function Demo({
+  savedSettings,
+  rules = DEFAULT_RULES,
+}: {
+  savedSettings?: Settings;
+  rules?: RuleSet;
+}) {
   const [settings, setSettings] = useState<Settings>(() =>
     validateSettings(savedSettings ?? defaultSettings),
   );
@@ -92,7 +99,10 @@ export default function Demo({ savedSettings }: { savedSettings?: Settings }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const nextId = useRef(1000);
   const customCount = posts.filter((post) => post.custom).length;
-  const decisions = useMemo(() => inspectBatch(posts, settings, '100'), [posts, settings]);
+  const decisions = useMemo(
+    () => inspectBatch(posts, settings, '100', rules),
+    [posts, settings, rules],
+  );
   const active = posts.find((post) => post.id === activeId);
   const result = active ? (decisions.get(active) ?? null) : null;
   const [session, setSession] = useState(0);
@@ -105,6 +115,7 @@ export default function Demo({ savedSettings }: { savedSettings?: Settings }) {
       document,
       getUrl: () => 'https://x.com/demo_author/status/100',
       settings,
+      rules,
       onHistory: history.record,
       onBlock: async (author, blocked) => {
         const next = validateSettings({
@@ -138,6 +149,9 @@ export default function Demo({ savedSettings }: { savedSettings?: Settings }) {
   useEffect(() => {
     engine.current?.updateSettings(settings);
   }, [settings, session]);
+  useEffect(() => {
+    engine.current?.updateRules(rules);
+  }, [rules, session]);
   function openSettings(section: 'general' | 'history') {
     setInitialSection(section);
     setView('settings');
@@ -193,6 +207,7 @@ export default function Demo({ savedSettings }: { savedSettings?: Settings }) {
           settings={settings}
           onPatch={patch}
           history={history}
+          rulePack={rules.pack}
           initialSection={initialSection}
           demo
         />
