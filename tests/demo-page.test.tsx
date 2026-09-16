@@ -56,7 +56,7 @@ it('uses downloaded rules in the extension demo and rechecks existing samples af
   pack.terms.adultOffers.push('合成远端词');
   fake.data[RULES_KEY] = { pack, checkedAt: 1000, updatedAt: 1000 };
   await act(open);
-  enter('合成远端词');
+  enter('合成远端词，私信获取');
   expect(screen.getByRole('status').textContent).toContain('成人内容线索');
   delete fake.data[RULES_KEY];
   await act(async () => {

@@ -64,7 +64,9 @@ export function present(
   const category = decision.rules.includes('spam-template')
     ? '模板刷屏'
     : decision.category === 'adult'
-      ? '色情引流'
+      ? decision.rules.includes('adult-hint')
+        ? '成人内容'
+        : '色情引流'
       : decision.category === 'spam'
         ? '垃圾广告'
         : '个人规则';

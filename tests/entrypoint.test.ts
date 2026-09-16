@@ -61,7 +61,7 @@ describe('extension entrypoint wiring', () => {
     vi.stubGlobal('defineContentScript', (definition: unknown) => definition);
     vi.stubGlobal('location', { href: 'https://x.com/sample_user/status/100' });
     document.body.innerHTML =
-      '<article data-testid="tweet"><div><a href="https://x.com/sample_cached/status/5301"><time>示例时间</time></a><div data-testid="tweetText">合成缓存词</div></div></article>';
+      '<article data-testid="tweet"><div><a href="https://x.com/sample_cached/status/5301"><time>示例时间</time></a><div data-testid="tweetText">合成缓存词，私信获取</div></div></article>';
     const entry = await import('../entrypoints/filter.content');
     await entry.default.main({
       isInvalid: false,

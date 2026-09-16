@@ -18,12 +18,14 @@ export function compileRules(pack: RulePack) {
   const teasingFirst = `${terms('comparisonPrefixes')}${teasing}${comparison}${appearance}`;
   const separator = '[\\p{P}]{0,4}';
   const target = `${terms('seekingCounts')}?${terms('seekingDurations')}?${terms('seekingTargets')}`;
+  const service = `${terms('dateVerbs')}(?:${terms('dateAbbreviations')}(?![a-z])|${terms('dateActions')})|${terms('profileOffers')}`;
+  const adult = `(?:${terms('adultOffers')}|${service}|${terms('adultHints')}|\\b${terms('adultLabels')}\\b)`;
+  const call = `(?:${phrases('adultCalls')}|${phrases('contactPhrases')}|\\b${terms('contactHandles')}[:：])`;
+  const quoted = (source: string) => re(`^[“‘「『"']?${source}[”’」』"']?$`);
   return {
     pack,
     adultOfferPattern: re(terms('adultOffers')),
-    adultPattern: re(
-      `${terms('adultOffers')}|${terms('adultHints')}|\\b${terms('adultLabels')}\\b`,
-    ),
+    adultPattern: re(adult),
     spamPattern: re(
       `${terms('spamPhrases')}|${terms('dailyEarnings')}\\d+|${terms('profitPromises')}\\s*${terms('profitTargets')}|${terms('doublePromises')}\\s*${terms('doublePossessives')}\\s*${terms('doubleTargets')}`,
     ),
@@ -37,6 +39,25 @@ export function compileRules(pack: RulePack) {
     bodyOnlyBaitPattern: re(
       `${terms('bodyRefusals')}${terms('entryVerbs')}${terms('bodyPossessives')}?${terms('lifeContexts')}${separator}${terms('bodyOnlyPrefixes')}${terms('intentWords')}?${terms('bodyEntryVerbs')}${terms('bodyPossessives')}?${terms('bodyParts')}`,
     ),
+    solicitation: {
+      subject: re(adult),
+      service: re(service),
+      offer: re(terms('adultOfferActions')),
+      location: re(terms('serviceLocations')),
+      call: re(call),
+      negation: re(terms('solicitationNegations')),
+      narrative: re(terms('narrativeMarkers')),
+      rejection: re(terms('rejectionPhrases')),
+      qualifier: re(`^(?:${phrases('promotionModifiers')}\\s*){0,3}$`),
+      // Across sentence boundaries, require whole promotional fragments rather
+      // than borrowing a keyword from a story or a call from another topic.
+      pitch: quoted(
+        `(?:${phrases('promotionModifiers')}\\s*){0,2}${adult}(?:\\s*${phrases('promotionModifiers')}){0,3}`,
+      ),
+      invitation: quoted(
+        `(?:${phrases('callPrefixes')}\\s*){0,2}${call}(?:\\s*${phrases('callSuffixes')}){0,2}`,
+      ),
+    },
     promotion: {
       platform: re(terms('platforms')),
       creator: re(terms('creators')),
@@ -59,9 +80,7 @@ export function compileRules(pack: RulePack) {
       ),
       eroticResponse: re(terms('eroticResponse')),
       profileContact: re(`${terms('profileContacts')}|\\b${terms('profileHandles')}\\b`),
-      explicitOffer: re(
-        `${terms('dateVerbs')}(?:${terms('dateAbbreviations')}(?![a-z])|${terms('dateActions')})|${terms('profileOffers')}`,
-      ),
+      explicitOffer: re(service),
       overnightOffer: re(terms('overnightOffers')),
       matchmaking: re(terms('matchmaking')),
       seekingPartner: re(`${terms('seekingVerbs')}${target}`),

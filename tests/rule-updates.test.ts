@@ -143,6 +143,8 @@ describe('manual rule updates', () => {
   });
   it('uses bundled rules for corrupt or older persisted data and propagates storage failures', async () => {
     expect(readRuleState({ pack: { schema: 99 } }).source).toBe('bundled');
+    const old = { ...nextPack(), schema: 1 };
+    expect(readRuleState({ pack: old }).pack).toEqual(BUNDLED_RULE_PACK);
     const { updater, write } = setup();
     write.mockRejectedValueOnce(new Error('合成存储失败'));
     await expect(updater.update()).rejects.toThrow('合成存储失败');

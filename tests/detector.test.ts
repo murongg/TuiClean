@@ -12,6 +12,119 @@ const post = (text: string, author = 'sample_account', links: string[] = []) => 
 
 describe('local detection with synthetic content', () => {
   it.each([
+    '成人资源合集。需要的私信获取。',
+    '成人资源合集\n需要的私信获取',
+    '成人资源合集。\n\n需要的私信获取。',
+    'NSFW 新合集已更新。完整内容看我主页。',
+    'NSFW 新合集已更新\r\n完整内容看我主页',
+    '最新成人资源合集；想看的私信领取完整链接。',
+    '私信获取完整版！成人资源合集。',
+    '「成人资源合集」\n「私信领取」',
+    '成人资源合集🍃\n需要的私\u200b信获取。',
+    'NSFW. Link in bio.',
+  ])('combines adjacent promotional fragments without requiring one sentence: %s', (text) => {
+    expect(inspect(post(text), defaultSettings)).toMatchObject({
+      level: 'block',
+      rules: ['adult-solicitation'],
+    });
+  });
+  it.each([
+    '成人资源合集。项目文档请私信获取。',
+    'NSFW。私信获取开源项目文档。',
+    '这个故事发生在约炮软件里。需要的私信获取。',
+    '成人资源合集。今天去图书馆看书。需要的私信获取。',
+    '不提供成人资源。需要的私信获取。',
+    '成人资源合集。不要私信获取。',
+    '成人资源合集。收到一条陌生私信。',
+    '不要相信「成人资源合集。私信领取」这类广告。',
+    'NSFW 新合集已更新。',
+    '成人资源合集。https://example.test/article',
+    'NSFW。项目文档可以在仓库里下载，私信我。',
+  ])('does not combine discussion, negation, unrelated or incomplete fragments: %s', (text) => {
+    expect(inspect(post(text), defaultSettings).level).toBe('allow');
+  });
+  it('keeps adjacent-fragment detection within each post and honors user controls', () => {
+    const first = post('成人资源合集', 'sample_first');
+    const second = { ...post('需要的私信获取', 'sample_second'), id: '102' };
+    const decisions = inspectBatch([first, second], defaultSettings, '100');
+    expect([...decisions.values()].every((result) => result.level === 'allow')).toBe(true);
+    const combined = post('成人资源合集\n需要的私信获取');
+    expect(inspect(combined, { ...defaultSettings, adult: false }).level).toBe('allow');
+    expect(inspect(combined, { ...defaultSettings, whitelist: ['sample_account'] }).level).toBe(
+      'allow',
+    );
+    expect(
+      inspect(combined, { ...defaultSettings, disabledRules: ['adult-solicitation', 'adult-hint'] })
+        .level,
+    ).toBe('allow');
+  });
+  it.each([
+    '虚构剧情：主角在约炮软件里碰到熟人，场面有点尴尬。',
+    '某款约炮软件的消息列表改版了。',
+    '在约炮软件收到一条陌生人的私信，没看懂对方在说什么。',
+    '约炮',
+    '裸聊',
+    'NSFW',
+    '今天聊聊 OnlyFans 的界面设计。',
+    '文章提到了成人资源这个词。',
+    '文中提到了裸聊。项目使用说明请私信获取。',
+    '文中提到了裸聊\n项目使用说明请私信获取。',
+    '裸聊这个话题暂时放下，接下来我想聊一下新项目的字体、图标、间距以及配色方案，私信获取示例。',
+    '我不提供成人资源，也不出售成人视频。',
+    '我不 提供成人资源。',
+    '不要私信我聊裸聊这个话题。',
+  ])('preserves adult topic mentions without an affirmative solicitation: %s', (text) => {
+    expect(inspect(post(text), defaultSettings)).toEqual({
+      level: 'allow',
+      rules: [],
+      reasons: [],
+    });
+  });
+  it('does not treat an ordinary external link as adult solicitation by itself', () => {
+    expect(
+      inspect(
+        post('讨论 NSFW 标签的排版。', 'sample_reader', ['https://example.test/design']),
+        defaultSettings,
+      ).level,
+    ).toBe('allow');
+  });
+  it.each([
+    '成人资源，私信获取完整链接。',
+    '约炮，私信我。',
+    '裸聊，主页联系。',
+    '提供成人资源。',
+    '出售无码资源。',
+    '在线裸聊。',
+    '同城约炮。',
+    'NSFW, link in bio',
+    'NSFW, DM me',
+    '成人资源，vx: sample_contact',
+    '这里提到了约炮软件；提供成人资源，私信获取。',
+    '不提供成人资源，提供裸聊。',
+    '成 人 资 源，私\u200b信获取。',
+    'ＮＳＦＷ，link in bio',
+  ])('continues filtering affirmative adult offers and calls to action: %s', (text) => {
+    expect(inspect(post(text), defaultSettings)).toMatchObject({
+      level: 'block',
+      rules: ['adult-solicitation'],
+    });
+  });
+  it('preserves independent personal, profile and repetition evidence for topic-only bodies', () => {
+    const input = post('虚构角色讨论约炮软件的通知设置。');
+    expect(inspect(input, { ...defaultSettings, keywords: ['约炮'] }).rules).toEqual([
+      'custom-keyword',
+    ]);
+    expect(inspect(input, { ...defaultSettings, blockedUsers: ['sample_account'] }).rules).toEqual([
+      'blocked-user',
+    ]);
+    expect(inspect({ ...input, name: '合成昵称 · 找固定炮友' }, defaultSettings).rules).toEqual([
+      'adult-profile',
+    ]);
+    expect(inspect(input, defaultSettings, { templateAuthors: 2 }).rules).toEqual([
+      'spam-template',
+    ]);
+  });
+  it.each([
     '虚构样本：不进入你的生活，只进入你的身体。',
     '不介入生活🌿只进入身体',
     '不走进你的生活，只想走进你的身体',
@@ -116,8 +229,8 @@ describe('local detection with synthetic content', () => {
   it('keeps body evidence and other independent rules when the name contains a topic label', () => {
     const name = 'Sample NSFW Notes';
     expect(inspect({ ...post('NSFW'), name }, defaultSettings)).toMatchObject({
-      level: 'suspect',
-      rules: ['adult-hint'],
+      level: 'allow',
+      rules: [],
     });
     expect(inspect({ ...post('成人资源，私信获取链接'), name }, defaultSettings)).toMatchObject({
       level: 'block',

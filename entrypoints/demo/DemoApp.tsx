@@ -57,8 +57,8 @@ const examples: Sample[] = [
     id: '106',
     author: 'demo_uncertain',
     name: '示例待判断账号',
-    kind: '弱信号样本',
-    text: 'NSFW',
+    kind: '普通话题样本',
+    text: '这篇合成文章提到了 NSFW 标签。',
     time: '2 分钟前',
   },
 ].map((post) => ({ ...post, links: [] }));

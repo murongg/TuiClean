@@ -22,7 +22,7 @@ export interface RuleInfo {
   description: string;
 }
 export interface RulePack {
-  schema: 1;
+  schema: 2;
   version: number;
   updatedAt: string;
   rules: RuleInfo[];
@@ -53,7 +53,7 @@ export function validateRulePack(value: unknown): RulePack {
   if (new TextEncoder().encode(JSON.stringify(value)).byteLength > RULE_PACK_LIMIT)
     throw new Error('规则包过大，已保留当前规则。');
   const pack = object(value, ['schema', 'version', 'updatedAt', 'rules', 'terms']);
-  if (pack.schema !== 1) throw new Error('规则包格式不兼容，请先更新扩展。');
+  if (pack.schema !== 2) throw new Error('规则包格式不兼容，请先更新扩展。');
   if (!Number.isSafeInteger(pack.version) || (pack.version as number) < 1)
     throw new Error('规则包版本无效。');
   const date = text(pack.updatedAt, 10);
@@ -93,6 +93,6 @@ export function validateRulePack(value: unknown): RulePack {
     }),
   ) as RulePack['terms'];
   if (total > 2000) throw new Error('规则词条总量超过限制。');
-  return { schema: 1, version: pack.version as number, updatedAt: date, rules, terms };
+  return { schema: 2, version: pack.version as number, updatedAt: date, rules, terms };
 }
 export const BUNDLED_RULE_PACK = validateRulePack(bundled);
