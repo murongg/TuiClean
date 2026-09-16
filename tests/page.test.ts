@@ -81,8 +81,62 @@ describe('X page adapter', () => {
 });
 
 describe('reversible page filtering', () => {
+  it('shows the matched service and location in details and keeps reveal reversible', () => {
+    const element = article('5602', '示例广场附近约炮', 'sample_local');
+    const app = controller();
+    app.scan();
+    const notice = () => element.querySelector('[data-tuiclean-host]')!.shadowRoot!;
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(true);
+    const reason = notice().querySelector('.reason')!.textContent!;
+    expect(reason).toContain('附近');
+    expect(reason).toContain('约炮');
+    expect(reason).toContain('地域');
+    expect(reason).toContain('片段');
+    notice().querySelector<HTMLButtonElement>('[data-action="reveal"]')!.click();
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(false);
+    expect(notice().querySelector('.reason')!.textContent).toBe(reason);
+    notice().querySelector<HTMLButtonElement>('[data-action="fold"]')!.click();
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(true);
+  });
+  it('folds and records an offer whose resource and contact fragments are on different lines', async () => {
+    const element = article('5403', 'NSFW 新合集已更新\n完整内容看我主页', 'sample_pitch');
+    expect(readPost(element)?.text).toBe('NSFW 新合集已更新\n完整内容看我主页');
+    const onHistory = vi.fn().mockResolvedValue(undefined);
+    const app = createController({
+      document,
+      getUrl: () => 'https://x.com/home',
+      settings: defaultSettings,
+      onWhitelist: vi.fn(),
+      onHistory,
+    });
+    controllers.push(app);
+    app.scan();
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(true);
+    await vi.waitFor(() =>
+      expect(onHistory).toHaveBeenCalledWith([
+        expect.objectContaining({ id: '5403', rules: ['adult-solicitation'], action: 'folded' }),
+      ]),
+    );
+  });
+  it('keeps a topic-only post visible and creates no interception record', async () => {
+    const element = article('5402', '合成故事提到了约炮软件的一条消息。', 'sample_topic');
+    const onHistory = vi.fn().mockResolvedValue(undefined);
+    const app = createController({
+      document,
+      getUrl: () => 'https://x.com/home',
+      settings: defaultSettings,
+      onWhitelist: vi.fn(),
+      onHistory,
+    });
+    controllers.push(app);
+    app.scan();
+    await Promise.resolve();
+    expect(element.hasAttribute('data-tuiclean-folded')).toBe(false);
+    expect(element.querySelector('[data-tuiclean-host]')).toBeNull();
+    expect(onHistory).not.toHaveBeenCalled();
+  });
   it('rescans existing posts when the active rule package changes and restores removed matches', () => {
-    const element = article('5201', '合成在线词', 'sample_online');
+    const element = article('5201', '合成在线词，私信获取', 'sample_online');
     const app = controller();
     app.scan();
     expect(element.hasAttribute('data-tuiclean-folded')).toBe(false);
@@ -135,7 +189,7 @@ describe('reversible page filtering', () => {
     ).toContain('性暗示');
   });
   it('starts recording after a disabled pending capture is enabled again', async () => {
-    article('900', 'NSFW', 'sample_switch');
+    article('900', '成人资源，私信获取', 'sample_switch');
     const onHistory = vi.fn().mockResolvedValue(undefined);
     const app = createController({
       document,
@@ -153,7 +207,7 @@ describe('reversible page filtering', () => {
     await vi.waitFor(() => expect(onHistory).toHaveBeenCalledOnce());
   });
   it('records presented matches once per page without recording them again on rescans', async () => {
-    article('901', 'NSFW', 'sample_history');
+    article('901', '成人资源，私信获取', 'sample_history');
     const onHistory = vi.fn().mockResolvedValue(undefined);
     const app = createController({
       document,
@@ -173,14 +227,14 @@ describe('reversible page filtering', () => {
     app.scan();
     await Promise.resolve();
     expect(onHistory).not.toHaveBeenCalled();
-    article('902', 'NSFW', 'sample_fresh');
+    article('902', '成人资源，私信获取', 'sample_fresh');
     app.scan();
     await vi.waitFor(() =>
       expect(onHistory).toHaveBeenCalledWith([expect.objectContaining({ id: '902' })]),
     );
   });
   it('honors the history switch and records mark-only treatment accurately', async () => {
-    article('903', 'NSFW', 'sample_mark');
+    article('903', '成人资源，私信获取', 'sample_mark');
     const onHistory = vi.fn().mockResolvedValue(undefined);
     const app = createController({
       document,
@@ -199,7 +253,7 @@ describe('reversible page filtering', () => {
     );
   });
   it('keeps filtering usable when history storage rejects and retries on a later scan', async () => {
-    const element = article('904', 'NSFW', 'sample_retry');
+    const element = article('904', '成人资源，私信获取', 'sample_retry');
     const onHistory = vi
       .fn()
       .mockRejectedValueOnce(new Error('合成历史存储错误'))
@@ -241,7 +295,7 @@ describe('reversible page filtering', () => {
     }
   });
   it('locally blocks all loaded posts by an author and can undo without trusting them', async () => {
-    const first = article('701', 'NSFW', 'sample_ad');
+    const first = article('701', '成人资源，私信获取', 'sample_ad');
     const other = article('702', '普通虚构内容。', 'sample_ad');
     let settings = { ...defaultSettings, mode: 'mark' as const };
     const onBlock = vi.fn(async (author: string, blocked: boolean) => {
@@ -310,7 +364,8 @@ describe('reversible page filtering', () => {
     expect(element.hasAttribute('data-tuiclean-folded')).toBe(false);
   });
   it('keeps weak signals visible and mark-only mode never folds', () => {
-    const weak = article('102', 'NSFW');
+    const weak = article('102', '合成普通回复');
+    weak.querySelector('[data-testid="User-Name"] span')!.textContent = '虚构作者 · 成人资源';
     const high = article();
     const app = controller();
     app.updateSettings({ ...defaultSettings, mode: 'mark' });

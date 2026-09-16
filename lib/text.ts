@@ -12,6 +12,10 @@ export function normalizeText(text: string): string {
 const decoration =
   /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\uFE0E\uFE0F\u20E3\u200D]/gu;
 
+export function stripDecorations(text: string): string {
+  return text.replace(decoration, '');
+}
+
 export function compactText(text: string): string {
-  return normalizeText(text).replace(decoration, '').replace(/\s/g, '');
+  return stripDecorations(normalizeText(text)).replace(/\s/g, '');
 }

@@ -50,6 +50,42 @@ describe('versioned data-only rule packs', () => {
       inspect({ ...sample('8'), name: '虚构昵称·寻合成伴侣' }, defaultSettings, {}, rules).rules,
     ).toEqual(['adult-profile']);
   });
+  it('uses downloaded vocabulary for adjacent promotional fragments as literal text', () => {
+    const pack = copy();
+    pack.terms.promotionModifiers = ['合成[合集]+'];
+    pack.terms.callPrefixes = ['合成[想看]+'];
+    pack.terms.callSuffixes = ['合成[内容]+'];
+    const content = 'NSFW 合成[合集]+\n合成[想看]+私信获取合成[内容]+';
+    const rules = compileRules(validateRulePack(pack));
+    expect(inspect(sample(content), defaultSettings).level).toBe('allow');
+    expect(inspect(sample(content), defaultSettings, {}, rules).rules).toEqual([
+      'adult-solicitation',
+    ]);
+    expect(
+      inspect(sample(content.replaceAll('[', '').replaceAll(']+', '')), defaultSettings, {}, rules)
+        .level,
+    ).toBe('allow');
+  });
+  it.each(['adultCalls', 'adultOfferActions'] as const)(
+    'uses downloaded %s as literal solicitation evidence',
+    (key) => {
+      const pack = copy();
+      pack.terms.adultOffers = ['合成主题'];
+      pack.terms[key] = ['合成[提供]+'];
+      const text = key === 'adultCalls' ? '合成主题，合成[提供]+' : '合成[提供]+合成主题';
+      const rules = compileRules(validateRulePack(pack));
+      expect(inspect(sample(text), defaultSettings, {}, rules).rules).toEqual([
+        'adult-solicitation',
+      ]);
+      expect(
+        inspect(sample(text.replace('[提供]+', '提供')), defaultSettings, {}, rules).level,
+      ).toBe('allow');
+    },
+  );
+  it('rejects a rule format without the new solicitation evidence fields', () => {
+    const old = { ...copy(), schema: 1 };
+    expect(() => validateRulePack(old)).toThrow(/格式不兼容/);
+  });
   it.each([
     ['comparisonPrefixes', 'comparisonBaitPattern', '比我', comparison],
     ['comparisonModifiers', 'comparisonBaitPattern', '的都', comparison],
@@ -115,7 +151,9 @@ describe('versioned data-only rule packs', () => {
     pack.terms.adultOffers = ['(a+)+$'];
     const rules = compileRules(validateRulePack(pack));
     expect(inspect(sample('a'.repeat(5000)), defaultSettings, {}, rules).level).toBe('allow');
-    expect(inspect(sample('(a+)+$'), defaultSettings, {}, rules).rules).toEqual(['adult-hint']);
+    expect(inspect(sample('(a+)+$，私信获取'), defaultSettings, {}, rules).rules).toEqual([
+      'adult-solicitation',
+    ]);
   });
   it.each([
     (pack: Record<string, unknown>) => {

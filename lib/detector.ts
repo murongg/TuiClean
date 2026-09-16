@@ -3,6 +3,7 @@ import { DEFAULT_RULES, type RuleSet } from './rules';
 import { compactText, normalizeText } from './text';
 import { findTemplates } from './templates';
 import { hasAdultProfile, hasAdultReferral, hasProfileSpam } from './promotion';
+import { detectSolicitation } from './solicitation';
 import { matchesUsername } from './accounts';
 export { normalizeText } from './text';
 
@@ -38,7 +39,6 @@ export function inspect(
   rules: RuleSet = DEFAULT_RULES,
 ): Decision {
   const {
-    adultPattern,
     adultOfferPattern,
     spamPattern,
     contactPattern,
@@ -133,9 +133,9 @@ export function inspect(
       return result('suspect', 'adult', 'adult-bait', '命中完整的关系与身体对照式招揽话术');
   }
   const spam = spamPattern.test(combined) || spamPattern.test(compact);
-  // Topic/platform labels in a name do not describe this reply. Keep body hints
-  // separate from explicit profile offers; suspect matches also fold by default.
-  const adultText = adultPattern.test(text) || adultPattern.test(text.replace(/\s/g, ''));
+  // Topic mentions alone cannot establish solicitation. Profile advertising is
+  // independent evidence and personal keyword rules have already run above.
+  const adultSolicitation = detectSolicitation(post.text.slice(0, 20_000), rules);
   const adultName = adultOfferPattern.test(name) || adultOfferPattern.test(name.replace(/\s/g, ''));
   const spamText = spamPattern.test(text) || spamPattern.test(text.replace(/\s/g, ''));
   const external = post.links.some((link) => {
@@ -151,11 +151,21 @@ export function inspect(
   });
   const contact =
     contactPattern.test(text) || contactPattern.test(text.replace(/\s/g, '')) || external;
-  if (settings.adult && (adultText || adultName)) {
-    if (adultText && contact && active('adult-solicitation'))
-      return result('block', 'adult', 'adult-solicitation', '同时出现成人内容线索与招揽、导流行为');
+  if (settings.adult && (adultSolicitation || adultName)) {
+    if (adultSolicitation && active('adult-solicitation'))
+      return {
+        level: 'block',
+        category: 'adult',
+        rules: ['adult-solicitation'],
+        reasons: adultSolicitation.reasons,
+      };
     if (active('adult-hint'))
-      return result('suspect', 'adult', 'adult-hint', '存在成人内容线索，证据不足');
+      return {
+        level: 'suspect',
+        category: 'adult',
+        rules: ['adult-hint'],
+        reasons: adultSolicitation?.reasons ?? ['昵称包含成人服务或资源表述'],
+      };
   }
   if (settings.spam && spam) {
     if (spamText && contact && active('spam-solicitation'))

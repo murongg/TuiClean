@@ -4,7 +4,13 @@ import { createController } from '../lib/controller';
 import { defaultSettings } from '../lib/settings';
 import type { Decision, Post } from '../lib/detector';
 
-const post: Post = { id: '301', author: 'sample_user', name: '虚构用户', text: 'NSFW', links: [] };
+const post: Post = {
+  id: '301',
+  author: 'sample_user',
+  name: '虚构用户',
+  text: '成人资源，私信获取',
+  links: [],
+};
 const decision: Decision = {
   level: 'suspect',
   category: 'spam',
@@ -18,7 +24,7 @@ function fixture() {
   article.style.display = 'flex';
   article.style.flexDirection = 'row';
   article.innerHTML =
-    '<div class="original"><div class="row"><div class="avatar"></div><div class="body"><div data-testid="User-Name"><span>虚构用户</span><a href="https://x.com/sample_user/status/301"><time>虚构时间</time></a></div><div class="text-wrap"><div data-testid="tweetText">NSFW</div></div><div role="group"><button>原始操作</button></div></div></div></div>';
+    '<div class="original"><div class="row"><div class="avatar"></div><div class="body"><div data-testid="User-Name"><span>虚构用户</span><a href="https://x.com/sample_user/status/301"><time>虚构时间</time></a></div><div class="text-wrap"><div data-testid="tweetText">成人资源，私信获取</div></div><div role="group"><button>原始操作</button></div></div></div></div>';
   document.body.append(article);
   return article;
 }
@@ -27,6 +33,21 @@ afterEach(() => {
 });
 
 describe('compact inline notice', () => {
+  it('labels profile-only adult hints according to the evidence', () => {
+    const host = present(
+      fixture(),
+      post,
+      {
+        level: 'suspect',
+        category: 'adult',
+        rules: ['adult-hint'],
+        reasons: ['昵称含成人服务表述'],
+      },
+      false,
+      { reveal: vi.fn(), fold: vi.fn(), dismiss: vi.fn(), allow: vi.fn() },
+    );
+    expect(host.shadowRoot!.querySelector('.label')!.textContent).toBe('疑似成人内容');
+  });
   it('keeps failed local blocks retryable and makes the error visible', async () => {
     const setBlocked = vi.fn().mockRejectedValue(new Error('测试写入失败'));
     const host = present(fixture(), post, decision, true, {
