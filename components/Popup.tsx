@@ -31,7 +31,7 @@ export function Popup({
     <main className="popup">
       <header className="popup-header">
         <Brand />
-        <span className="version">v0.1.0</span>
+        <span className="version">v0.1.1</span>
       </header>
       <div className="power-row">
         <span>

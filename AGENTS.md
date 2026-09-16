@@ -2,7 +2,7 @@
 
 ## Version policy
 
-Keep the extension and package version at **0.1.0** until the user explicitly requests a version change. Do not automatically increment patch, minor, or major versions for fixes or new features. Keep the popup, settings, demo and current installation instructions consistent with this version.
+Keep the extension and package version at **0.1.1** until the user explicitly requests a version change. Do not automatically increment patch, minor, or major versions for fixes or new features. Keep the popup, settings, demo and current installation instructions consistent with this version.
 
 ## Commit messages
 

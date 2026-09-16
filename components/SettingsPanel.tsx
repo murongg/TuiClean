@@ -104,7 +104,7 @@ export function SettingsPanel({
             </button>
           ))}
         <div className="nav-note">
-          TuiClean 0.1.0
+          TuiClean 0.1.1
           <br />
           MIT 开源协议
         </div>

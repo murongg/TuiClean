@@ -339,7 +339,7 @@ export default function Demo({ savedSettings }: { savedSettings?: Settings }) {
           <footer className="demo-footer">
             <span>TuiClean · 推净</span>
             <span>本地识别，可解释，可恢复。</span>
-            <span>MIT 开源 · v0.1.0</span>
+            <span>MIT 开源 · v0.1.1</span>
           </footer>
         </>
       )}

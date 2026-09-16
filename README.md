@@ -7,7 +7,7 @@
 <p align="center">把引流和刷屏折叠起来，让值得看的讨论留在眼前。</p>
 
 <p align="center">
-  <a href="https://github.com/murongg/TuiClean/releases"><img src="https://img.shields.io/badge/version-0.1.0-2563eb?style=flat-square" alt="版本 0.1.0" /></a>
+  <a href="https://github.com/murongg/TuiClean/releases"><img src="https://img.shields.io/badge/version-0.1.1-2563eb?style=flat-square" alt="版本 0.1.1" /></a>
   <a href="#安装"><img src="https://img.shields.io/badge/Chrome-extension-191b1f?style=flat-square" alt="Chrome 浏览器扩展" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-191b1f?style=flat-square" alt="MIT 开源协议" /></a>
 </p>
@@ -136,7 +136,7 @@ demo_*
 
 ## 安装
 
-当前版本为 **0.1.0**，采用手动安装方式。Chrome 是主要适配浏览器；Edge 可使用 Chrome 安装包，Firefox 提供单独的体验包。
+当前版本为 **0.1.1**，采用手动安装方式。Chrome 是主要适配浏览器；Edge 可使用 Chrome 安装包，Firefox 提供单独的体验包。
 
 安装包会通过 [版本下载](https://github.com/murongg/TuiClean/releases) 提供。若页面暂时没有安装包，请等待首次发布。
 
