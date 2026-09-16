@@ -3,6 +3,7 @@ import type { Settings } from './settings';
 import { readPost, supportedPage, threadRootId } from './page';
 import { noticeInPlace, pageStyle, present } from './presentation';
 import { historyMatch, type HistoryMatch } from './history';
+import { DEFAULT_RULES, type RuleSet } from './rules';
 
 export interface PageStats {
   scanned: number;
@@ -16,6 +17,7 @@ interface Options {
   document: Document;
   getUrl: () => string;
   settings: Settings;
+  rules?: RuleSet;
   onWhitelist: (author: string) => Promise<void>;
   onBlock?: (author: string, blocked: boolean) => Promise<Settings>;
   onBlockX?: (article: Element, post: Post, signal: AbortSignal) => Promise<void>;
@@ -26,6 +28,7 @@ interface Options {
 export function createController(options: Options) {
   const { document: doc } = options;
   let settings = options.settings;
+  let rules = options.rules ?? DEFAULT_RULES;
   let url = options.getUrl();
   let paused = false;
   let stopped = false;
@@ -115,6 +118,7 @@ export function createController(options: Options) {
         candidates.map((item) => item.post),
         settings,
         threadRootId(url),
+        rules,
       );
       const records: HistoryMatch[] = [];
       for (const { element, post } of candidates) {
@@ -223,6 +227,10 @@ export function createController(options: Options) {
   return {
     scan,
     getStats: () => ({ ...stats }),
+    updateRules(next: RuleSet) {
+      rules = next;
+      scan();
+    },
     updateSettings(next: Settings) {
       if ((!settings.enabled || !settings.historyEnabled) && next.enabled && next.historyEnabled)
         recorded.clear();

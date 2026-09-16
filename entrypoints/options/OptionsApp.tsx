@@ -3,6 +3,7 @@ import { Brand } from '../../components/Brand';
 import { SettingsPanel } from '../../components/SettingsPanel';
 import { useSettings } from '../../components/use-settings';
 import { historyClient } from '../../lib/history-client';
+import { ruleClient } from '../../lib/rule-client';
 import '../../components/theme.css';
 
 export default function Options() {
@@ -23,6 +24,7 @@ export default function Options() {
           settings={settings}
           onPatch={patch}
           history={historyClient}
+          ruleSource={ruleClient}
           initialSection={location.hash === '#history' ? 'history' : 'general'}
         />
       ) : (

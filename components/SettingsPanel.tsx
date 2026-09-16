@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { defaultSettings, validateSettings, type Settings } from '../lib/settings';
-import { RULES } from '../lib/rules';
+import { BUNDLED_RULE_PACK, type RulePack } from '../lib/rule-pack';
+import type { RuleSource } from '../lib/rule-updates';
+import { useRules } from './use-rules';
+import { RuleUpdates } from './RuleUpdates';
 import { Toggle } from './Toggle';
 import { HistoryPanel } from './HistoryPanel';
 import { BackupPanel } from './BackupPanel';
@@ -13,6 +16,8 @@ interface Props {
   demo?: boolean;
   history?: HistorySource;
   initialSection?: 'general' | 'history';
+  ruleSource?: RuleSource;
+  rulePack?: RulePack;
 }
 export function SettingsPanel({
   settings,
@@ -20,7 +25,11 @@ export function SettingsPanel({
   demo = false,
   history,
   initialSection = 'general',
+  ruleSource,
+  rulePack = BUNDLED_RULE_PACK,
 }: Props) {
+  const ruleCache = useRules(ruleSource);
+  const currentRules = ruleSource ? ruleCache.state.pack : rulePack;
   const [section, setSection] = useState<'general' | 'personal' | 'rules' | 'data' | 'history'>(
     history ? initialSection : 'general',
   );
@@ -125,7 +134,12 @@ export function SettingsPanel({
           </p>
         </div>
         {section === 'history' && history ? (
-          <HistoryPanel source={history} settings={settings} onPatch={onPatch} />
+          <HistoryPanel
+            source={history}
+            settings={settings}
+            onPatch={onPatch}
+            rules={currentRules.rules}
+          />
         ) : null}
         {section === 'general' ? (
           <>
@@ -275,7 +289,16 @@ export function SettingsPanel({
         ) : null}
         {section === 'rules' ? (
           <section className="settings-section rules-list">
-            {RULES.map((rule) => (
+            {ruleSource ? (
+              <RuleUpdates
+                source={ruleSource}
+                state={ruleCache.state}
+                loading={ruleCache.loading}
+                readError={ruleCache.error}
+                disabled={busy}
+              />
+            ) : null}
+            {currentRules.rules.map((rule) => (
               <Toggle
                 key={rule.id}
                 label={rule.name}
@@ -312,6 +335,10 @@ export function SettingsPanel({
                   MB，可关闭或清空。
                 </li>
                 <li>识别数据和拦截记录不上传，不包含统计追踪。</li>
+                <li>
+                  点击“更新规则”时从 GitHub
+                  下载词库，不上传帖子或个人名单。规则缓存在本机，可恢复内置版本。
+                </li>
                 <li>
                   “本地拉黑”仅保存本机规则；“X 拉黑”在你点击后复用 X 网页登录态调用接口，修改 X
                   黑名单。授权信息临时留在工作页内存中，不纳入备份。

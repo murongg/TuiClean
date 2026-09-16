@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { BUNDLED_RULE_PACK } from '../lib/rule-pack';
+import { RULES_KEY } from '../lib/rule-updates';
 
 const fake = vi.hoisted(() => ({
   id: 'sample_extension' as string | undefined,
@@ -48,6 +50,23 @@ const enter = (text: string) => {
   fireEvent.click(screen.getByRole('button', { name: '检测并预览' }));
 };
 
+it('uses downloaded rules in the extension demo and rechecks existing samples after a restore', async () => {
+  const pack = structuredClone(BUNDLED_RULE_PACK);
+  pack.version++;
+  pack.terms.adultOffers.push('合成远端词');
+  fake.data[RULES_KEY] = { pack, checkedAt: 1000, updatedAt: 1000 };
+  await act(open);
+  enter('合成远端词');
+  expect(screen.getByRole('status').textContent).toContain('成人内容线索');
+  delete fake.data[RULES_KEY];
+  await act(async () => {
+    fake.listeners.forEach((fn) => fn({ [RULES_KEY]: {} }, 'local'));
+  });
+  await waitFor(() => expect(screen.getByRole('status').textContent).toContain('未命中'));
+  expect(document.querySelectorAll('[data-custom="true"]')).toHaveLength(1);
+  expect(fake.set).not.toHaveBeenCalled();
+});
+
 it('connects the real demo entrypoint to saved preferences and follows storage changes', async () => {
   await act(open);
   enter('虚构测试作者🍑青杉词');
@@ -76,12 +95,10 @@ it('connects the real demo entrypoint to saved preferences and follows storage c
 
 it('waits for the saved preferences instead of testing with temporary defaults', async () => {
   let resolve!: (value: Record<string, unknown>) => void;
-  fake.get.mockImplementation(
-    () =>
-      new Promise((done) => {
-        resolve = done;
-      }),
-  );
+  const waiting = new Promise<Record<string, unknown>>((done) => {
+    resolve = done;
+  });
+  fake.get.mockImplementation(() => waiting);
   await act(open);
   expect(screen.queryByRole('textbox', { name: '测试内容' })).toBeNull();
   expect(screen.getByRole('status').textContent).toContain('读取');

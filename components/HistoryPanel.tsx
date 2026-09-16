@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { historyUrl, HISTORY_LIMIT, type HistoryEntry, type HistorySource } from '../lib/history';
 import type { Settings } from '../lib/settings';
 import { RULES } from '../lib/rules';
+import type { RuleInfo } from '../lib/rule-pack';
 import { Toggle } from './Toggle';
 import './history.css';
 
@@ -12,8 +13,6 @@ const personalRules = new Map([
   ['custom-username', '用户名匹配'],
   ['blocked-user', '本地黑名单'],
 ]);
-const ruleName = (id: string) =>
-  RULES.find((rule) => rule.id === id)?.name ?? personalRules.get(id) ?? id;
 
 function HistoryText({ row }: { row: HistoryEntry }) {
   const [expanded, setExpanded] = useState(false);
@@ -44,9 +43,12 @@ interface Props {
   source: HistorySource;
   settings: Settings;
   onPatch: (patch: Partial<Settings>) => Promise<void>;
+  rules?: readonly RuleInfo[];
 }
 
-export function HistoryPanel({ source, settings, onPatch }: Props) {
+export function HistoryPanel({ source, settings, onPatch, rules: ruleInfo = RULES }: Props) {
+  const ruleName = (id: string) =>
+    ruleInfo.find((rule) => rule.id === id)?.name ?? personalRules.get(id) ?? id;
   const [rows, setRows] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
