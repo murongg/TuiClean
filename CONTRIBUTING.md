@@ -4,7 +4,34 @@
 
 ## 开始
 
-推荐使用 Node.js 24：`npm ci`，然后运行 `npm run verify`。开发扩展用 `npm run dev`，独立演示用 `npm run demo`。
+技术栈为 WXT、React、TypeScript 和 Vitest。使用 Node.js 22 最新补丁版或更新版本，先运行 `npm ci` 安装依赖。
+
+```sh
+npm run dev             # 扩展开发模式
+npm run demo            # 独立体验页
+npm run verify          # 测试、类型检查与 Chrome 构建
+npm run build:firefox    # Firefox 构建
+npm run zip             # Chrome 安装包
+npm run zip:firefox      # Firefox 安装包与源码 ZIP
+npm run format:check     # 格式检查
+```
+
+Chrome 构建目录为 `.output/chrome-mv3`，Firefox 为 `.output/firefox-mv2`。将对应目录加载到浏览器中测试；独立体验页用于测试与预览，要过滤真实 X 页面必须加载扩展。
+
+macOS 文件选择窗口可按 `Command + Shift + .` 显示 `.output` 隐藏目录。更新时保留实际加载目录并重新加载扩展，避免卸载造成数据丢失。
+
+## 项目结构
+
+```text
+entrypoints/       页面脚本、弹窗、设置与体验页入口
+components/        共用界面与主题
+lib/               识别规则、账号匹配、页面适配与本地存储
+public/            Logo、扩展图标与素材说明
+tests/             合成数据的单元与 DOM 集成测试
+docs/              识别规则与视觉规范
+```
+
+识别边界见 [规则说明](./docs/rules.md)，界面与 Logo 约定见 [视觉规范](./docs/branding.md)。
 
 ## 改动约定
 
@@ -14,6 +41,30 @@
 4. 识别必须有可解释的依据，不得把昵称线索或重复模板表述为确定违规。内容展示遵循用户模式：默认折叠命中项，或仅标注；展开后必须保留再次折叠的入口。
 5. 页面适配集中在 `lib/page.ts`，规则判断保持纯函数；浏览器 API 留在适配层。
 6. 提交前运行 `npm run verify`，涉及跨浏览器配置时运行 `npm run build:firefox`。
+
+验证结果记录在测试输出、CI 日志或提交说明中，不新增独立的 verification 报告文档。
+
+## 提交信息
+
+提交标题的描述和正文统一使用中文，保留 Conventional Commits 的类型前缀；文件名、命令和版本号等标识按原样书写。例如：
+
+- `feat: 增加关键词筛选`
+- `fix: 修复昵称误判`
+- `chore: 发布 vX.Y.Z`
+
+## 版本发布
+
+先将工作流及日常改动提交并推送到 `main`，再在干净的 `main` 分支运行 `npm run release`。bumpp 会交互选择版本，同步包、界面和当前文档的版本号；验证通过后提交、创建 `vX.Y.Z` 标签并推送。
+
+标签推送会触发 [Release 工作流](./.github/workflows/release.yml)：
+
+1. 核对标签、包与锁文件的版本，确认提交属于 `main`。
+2. 运行测试、类型检查和格式检查，构建 Chrome／Firefox 安装包。
+3. 生成 GitHub Release 说明，上传两个浏览器的 ZIP，附件齐备后发布 Release。
+
+工作流使用 GitHub 自动提供的 `GITHUB_TOKEN`，只发布 GitHub Release。版本必须为普通数字 `X.Y.Z`，不接受带 `beta` 等后缀的标签。
+
+失败时可在 Actions 中重跑，续传尚未发布的草稿；同标签已有正式 Release 时停止并保留现有附件。Firefox 安装包用于开发者临时加载，正式签名分发需另行处理。
 
 ## 报告问题
 

@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a commit from main
+        run: git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate release version
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+          const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+          if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)
+              || version.split('.').some(part => Number(part) > 65535)
+              || version.split('.').every(part => Number(part) === 0)) {
+            throw new Error('Release requires a numeric Chrome-compatible X.Y.Z version.');
+          }
+          if (process.env.RELEASE_TAG !== `v${version}`
+              || lock.version !== version || lock.packages?.['']?.version !== version) {
+            throw new Error('Tag, package.json and package-lock.json versions must match.');
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\n`);
+          JS
+      - run: npm ci
+      - run: npm run verify
+      - run: npm run format:check
+      - run: npm run zip
+      - run: npm run zip:firefox
+      - name: Validate release archives
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 - <<'PY'
+          import json, os, zipfile
+          version = os.environ['VERSION']
+          for browser in ('chrome', 'firefox'):
+              path = f'.output/tuiclean-{version}-{browser}.zip'
+              with zipfile.ZipFile(path) as archive:
+                  assert archive.testzip() is None, f'Corrupt archive: {path}'
+                  manifest = json.loads(archive.read('manifest.json'))
+                  assert manifest['version'] == version, f'Wrong version: {path}'
+                  if browser == 'chrome':
+                      assert manifest['manifest_version'] == 3
+                  else:
+                      assert manifest['browser_specific_settings']['gecko']['id']
+              print(f'Validated {path}')
+          PY
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$draft" != "true" ]; then
+              echo "::error::This tag already has a published release. Existing assets will be preserved."
+              exit 1
+            fi
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --draft \
+              --title "TuiClean $RELEASE_TAG" --generate-notes
+          fi
+          # Publish only after both attachments are present. A failed upload leaves
+          # a draft, which can be completed by rerunning this workflow.
+          gh release upload "$RELEASE_TAG" \
+            ".output/tuiclean-$VERSION-chrome.zip" \
+            ".output/tuiclean-$VERSION-firefox.zip" --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --verify-tag

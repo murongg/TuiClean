@@ -2,6 +2,9 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
+  zip: {
+    excludeSources: ['work/**', 'coverage/**', 'docs/plans/**', 'docs/specs/**'],
+  },
   manifest: ({ browser }) => ({
     name: 'TuiClean · 推净',
     description: '在本地识别 X 中的文字色情引流与垃圾广告。屏蔽有原因，误判可恢复。',
